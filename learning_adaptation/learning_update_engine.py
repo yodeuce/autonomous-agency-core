@@ -2,17 +2,34 @@
 FILE 17: learning_update_engine.py
 PURPOSE: Updates models from outcomes
 ROLE: This is where experience compounds
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Learning Methods (CARBON[6] §6):
+    TD Learning:
+        V(s) ← V(s) + α[r + γV(s') - V(s)]
+        Where: α = learning rate, γ = discount factor
+
+    Policy Gradient:
+        θ ← θ + α · ∇_θ log π(a|s) · G_t
+        Where: G_t = discounted cumulative reward
+
+    Salience-Based Learning Rate:
+        α_effective = α_base × (1 + salience_boost × S(memory))
+        Where: S(memory) = memory salience score
 
 Includes:
-- Policy updates
+- Policy updates (TD Learning, Policy Gradient)
 - Reward model updates
 - Memory salience adjustments
 - Environment model corrections
+- Prioritized experience replay
 """
 
 from __future__ import annotations
 
 import logging
+import math
+import random
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -42,6 +59,8 @@ class LearningConfig:
     min_experiences_to_learn: int = 10
     update_frequency: int = 10  # Learn every N steps
     max_experience_buffer: int = 10000
+    td_discount_factor: float = 0.95
+    salience_boost: float = 0.5
 
 
 class LearningUpdateEngine:
@@ -250,6 +269,28 @@ class LearningUpdateEngine:
             "learning_rate": lr,
         }
 
+    def compute_td_error(
+        self,
+        reward: float,
+        current_value: float,
+        next_value: float,
+    ) -> float:
+        """
+        Compute Temporal Difference error (CARBON[6] §6).
+
+        Formula: δ = r + γV(s') - V(s)
+
+        Args:
+            reward: Observed reward
+            current_value: V(s) - estimated value of current state
+            next_value: V(s') - estimated value of next state
+
+        Returns:
+            TD error δ
+        """
+        gamma = self.config.td_discount_factor
+        return reward + gamma * next_value - current_value
+
     # -------------------------------------------------------------------------
     # HELPERS
     # -------------------------------------------------------------------------
@@ -261,3 +302,66 @@ class LearningUpdateEngine:
         buffer = self.experience_buffer
         batch_size = min(self.config.batch_size, len(buffer))
         return random.sample(buffer, batch_size)
+
+
+class PrioritizedExperienceReplay:
+    """
+    Prioritized Experience Replay (CARBON[6] §6).
+
+    Experiences with higher TD error are replayed more frequently.
+    Priority: p_i = |δ_i| + ε
+    Sampling probability: P(i) = p_i^α / Σ_k p_k^α
+    """
+
+    def __init__(
+        self,
+        capacity: int = 10000,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        epsilon: float = 1e-6,
+    ):
+        self.capacity = capacity
+        self.alpha = alpha  # Priority exponent
+        self.beta = beta    # Importance sampling exponent
+        self.epsilon = epsilon
+        self.buffer: list[tuple[LearningExperience, float]] = []  # (experience, priority)
+
+    def add(self, experience: LearningExperience, td_error: float = 1.0) -> None:
+        """Add experience with priority based on TD error."""
+        priority = abs(td_error) + self.epsilon
+        if len(self.buffer) >= self.capacity:
+            # Remove lowest priority
+            min_idx = min(range(len(self.buffer)), key=lambda i: self.buffer[i][1])
+            self.buffer[min_idx] = (experience, priority)
+        else:
+            self.buffer.append((experience, priority))
+
+    def sample(self, batch_size: int) -> list[LearningExperience]:
+        """Sample batch with probability proportional to priority."""
+        if not self.buffer:
+            return []
+
+        priorities = [p ** self.alpha for _, p in self.buffer]
+        total = sum(priorities)
+        probabilities = [p / total for p in priorities]
+
+        indices = []
+        for _ in range(min(batch_size, len(self.buffer))):
+            r = random.random()
+            cumulative = 0.0
+            for i, prob in enumerate(probabilities):
+                cumulative += prob
+                if r <= cumulative:
+                    indices.append(i)
+                    break
+
+        return [self.buffer[i][0] for i in indices]
+
+    def update_priority(self, index: int, new_td_error: float) -> None:
+        """Update the priority of an experience."""
+        if 0 <= index < len(self.buffer):
+            exp = self.buffer[index][0]
+            self.buffer[index] = (exp, abs(new_td_error) + self.epsilon)
+
+    def __len__(self) -> int:
+        return len(self.buffer)

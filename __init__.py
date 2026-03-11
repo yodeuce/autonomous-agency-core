@@ -15,4 +15,4 @@ Modules:
     elite_modules            - Multi-agent, simulation, red teaming (Files 22-24)
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

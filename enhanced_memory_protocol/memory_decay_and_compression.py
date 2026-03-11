@@ -2,9 +2,23 @@
 FILE 8: memory_decay_and_compression.py
 PURPOSE: Intentional forgetting and summarization
 ROLE: Keeps memory lean and strategic
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Decay Functions (CARBON[6] §3.5):
+    Exponential:  S(t) = S₀ · e^(-λt)        [Default for episodic]
+    Power Law:    S(t) = S₀ · (1 + t)^(-α)   [For semantic memories]
+    Linear:       S(t) = max(S_min, S₀ - kt)  [For time-bounded tasks]
+    Step:         S(t) = S₀ if t < T else 0    [For deadline-based events]
+
+Compression Strategy (CARBON[6] §3.5):
+    1. Identify Candidates — Memories with salience below compression threshold
+    2. Group by Type — Cluster similar low-salience memories
+    3. Generate Summary — Create compressed representation preserving key insights
+    4. Supersede Originals — Replace individual memories with summary
+    5. Update References — Maintain provenance chain to originals
 
 Includes:
-- Temporal decay functions
+- Temporal decay functions (exponential, power law, linear, step)
 - Utility-based pruning
 - Memory compression rules
 - Supersession logic
@@ -229,16 +243,31 @@ class MemoryDecayEngine:
         function: str,
         half_life: int,
     ) -> float:
-        """Apply a specific decay function."""
+        """
+        Apply a specific decay function.
+
+        Formal Definitions (CARBON[6] §3.5):
+            Exponential:  S(t) = S₀ · e^(-λt)        [Default for episodic]
+            Power Law:    S(t) = S₀ · (1 + t)^(-α)   [For semantic memories]
+            Linear:       S(t) = max(S_min, S₀ - kt)  [For time-bounded tasks]
+            Step:         S(t) = S₀ if t < T else 0    [For deadline-based events]
+        """
         if half_life <= 0 or function == "none":
             return value
 
         if function == "exponential":
+            # S(t) = S₀ · e^(-λt), where λ = ln(2)/half_life
             return value * math.exp(-0.693 * age / half_life)
+        elif function == "power_law":
+            # S(t) = S₀ · (1 + t)^(-α), where α derived from half_life
+            alpha = 0.693 / math.log(1 + half_life) if half_life > 0 else 1.0
+            return value * (1 + age) ** (-alpha)
         elif function == "linear":
+            # S(t) = max(S_min, S₀ - kt)
             factor = max(0.0, 1.0 - (age / (2.0 * half_life)))
             return value * factor
         elif function == "step":
+            # S(t) = S₀ if t < T else 0
             return value if age < half_life else 0.0
         return value
 

@@ -176,3 +176,66 @@ class EnvironmentStateModel:
             if var.confidence < 0.3:
                 issues.append(f"Variable '{name}' has low confidence: {var.confidence:.3f}")
         return issues
+
+
+class PartiallyObservableStateModel(EnvironmentStateModel):
+    """
+    Extension for partially observable environments (CARBON[6] §4.3).
+
+    Maintains belief distributions over unobservable state variables
+    and provides interfaces for Bayesian belief updates.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.belief_distributions: dict[str, dict[str, float]] = {}
+
+    def register_belief(
+        self,
+        variable_name: str,
+        prior_mean: float = 0.0,
+        prior_variance: float = 1.0,
+    ) -> None:
+        """Register a belief distribution for a latent variable."""
+        self.belief_distributions[variable_name] = {
+            "mean": prior_mean,
+            "variance": prior_variance,
+            "confidence": 0.5,
+        }
+
+    def update_belief(
+        self,
+        variable_name: str,
+        observation: float,
+        observation_noise: float = 0.1,
+    ) -> dict[str, float]:
+        """
+        Bayesian belief update for a partially observable variable.
+
+        P(θ|D) ∝ P(D|θ) · P(θ)
+        """
+        if variable_name not in self.belief_distributions:
+            self.register_belief(variable_name, prior_mean=observation)
+
+        belief = self.belief_distributions[variable_name]
+        prior_mean = belief["mean"]
+        prior_var = belief["variance"]
+
+        # Kalman-style update
+        kalman_gain = prior_var / (prior_var + observation_noise)
+        posterior_mean = prior_mean + kalman_gain * (observation - prior_mean)
+        posterior_var = (1 - kalman_gain) * prior_var
+
+        belief["mean"] = posterior_mean
+        belief["variance"] = posterior_var
+        belief["confidence"] = min(1.0, belief["confidence"] + 0.05)
+
+        # Also update the state variable if registered
+        if variable_name in self.variables:
+            self.variables[variable_name].update(posterior_mean, belief["confidence"])
+
+        return belief
+
+    def get_belief_state(self) -> dict[str, dict[str, float]]:
+        """Return all current belief distributions."""
+        return dict(self.belief_distributions)

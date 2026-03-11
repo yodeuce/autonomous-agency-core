@@ -57,6 +57,32 @@ class ObserverConfig:
     max_staleness_steps: int = 50
 
 
+# Source reliability defaults (CARBON[6] §4.2)
+# | Source Type     | Default Reliability |
+# |----------------|---------------------|
+# | Internal State | 1.0                 |
+# | User Input     | 0.9                 |
+# | API            | 0.95                |
+# | Sensor         | 0.8                 |
+# | Inference      | variable            |
+SOURCE_RELIABILITY: dict[str, float] = {
+    "internal_state": 1.0,
+    "system_clock": 1.0,
+    "user_input": 0.9,
+    "api": 0.95,
+    "task_management_api": 0.95,
+    "resource_tracker": 0.99,
+    "monitoring_system": 0.9,
+    "api_monitor": 0.85,
+    "infrastructure_monitor": 0.9,
+    "sensor": 0.8,
+    "inference": 0.5,
+    "sentiment_analysis_pipeline": 0.6,
+    "competitive_intelligence": 0.5,
+    "feedback_aggregator": 0.65,
+}
+
+
 class EnvironmentObserver:
     """
     Ingests raw environment signals from various sources,
@@ -341,3 +367,17 @@ class EnvironmentObserver:
 
             self._running_mean[variable_name] = new_mean
             self._running_var[variable_name] = new_var / count
+
+    def validate_source(self, source_name: str) -> float:
+        """
+        Validate and return the reliability score for a data source (CARBON[6] §4.2).
+
+        Returns:
+            Reliability score [0.0, 1.0]
+        """
+        if source_name in self.sources:
+            source = self.sources[source_name]
+            if not source.is_available():
+                return 0.0
+
+        return SOURCE_RELIABILITY.get(source_name, 0.5)

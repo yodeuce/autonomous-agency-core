@@ -2,6 +2,24 @@
 FILE 6: memory_salience_engine.py
 PURPOSE: Computes priority of memories
 ROLE: Ensures the agent recalls what matters most
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Formal Salience Formula (CARBON[6] §3.3):
+    S(m) = w₁·EMV_impact(m) + w₂·risk_factor(m) + w₃·recency(m) + w₄·frequency(m)
+
+    Where:
+        EMV_impact(m)  = normalized absolute impact on expected value
+        risk_factor(m) = amplification for risk-related memories
+        recency(m)     = exponential decay based on time since creation
+        frequency(m)   = log(access_count + 1) / log(max_access + 1)
+
+    Default Weights (CARBON[6] §3.3):
+        | Factor     | Weight | Rationale                           |
+        |-----------|--------|-------------------------------------|
+        | EMV Impact | 0.35  | Primary driver of decision relevance |
+        | Risk Factor| 0.25  | Safety-critical memories amplified   |
+        | Recency    | 0.25  | Recent experiences more relevant     |
+        | Frequency  | 0.15  | Frequently accessed = frequently useful|
 
 Logic includes:
 - EMV impact weighting
@@ -22,12 +40,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SalienceWeights:
-    """Configurable weights for salience computation."""
-    emv_impact: float = 0.30
+    """Configurable weights for salience computation (CARBON[6] §3.3)."""
+    emv_impact: float = 0.35
     risk_amplification: float = 0.25
-    recency: float = 0.20
+    recency: float = 0.25
     frequency: float = 0.15
-    confidence: float = 0.10
 
 
 class MemorySalienceEngine:
@@ -36,9 +53,10 @@ class MemorySalienceEngine:
     Determines what the agent should recall when making decisions.
     """
 
-    def __init__(self, weights: SalienceWeights | None = None):
+    def __init__(self, weights: SalienceWeights | None = None, max_access: int = 100):
         self.weights = weights or SalienceWeights()
         self.current_step: int = 0
+        self.max_access: int = max_access  # For frequency normalization
 
     def set_step(self, step: int) -> None:
         """Update the current timestep for recency calculations."""
@@ -71,15 +89,13 @@ class MemorySalienceEngine:
         risk_score = self._risk_amplification_score(memory, context)
         recency_score = self._recency_score(memory)
         frequency_score = self._frequency_score(memory)
-        confidence_score = memory.get("confidence_score", 0.5)
 
-        # Weighted combination
+        # Weighted combination: S(m) = w₁·EMV + w₂·risk + w₃·recency + w₄·frequency
         salience = (
             self.weights.emv_impact * emv_score
             + self.weights.risk_amplification * risk_score
             + self.weights.recency * recency_score
             + self.weights.frequency * frequency_score
-            + self.weights.confidence * confidence_score
         )
 
         # Apply decay function
@@ -197,14 +213,16 @@ class MemorySalienceEngine:
     def _frequency_score(self, memory: dict[str, Any]) -> float:
         """
         Frequently accessed memories are reinforced.
-        Follows a logarithmic curve to prevent runaway reinforcement.
+
+        Formula (CARBON[6] §3.3):
+            frequency(m) = log(access_count + 1) / log(max_access + 1)
         """
         access_count = memory.get("access_count", 0)
         if access_count <= 0:
-            return 0.1  # Minimum for never-accessed
+            return 0.0
 
-        # Logarithmic reinforcement
-        return min(1.0, 0.2 + 0.2 * math.log(1 + access_count))
+        max_access = max(self.max_access, access_count)
+        return math.log(access_count + 1) / math.log(max_access + 1)
 
     # -------------------------------------------------------------------------
     # DECAY APPLICATION

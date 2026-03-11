@@ -35,6 +35,51 @@ class ConstraintType(Enum):
     ADVISORY = "advisory"  # Logged but not enforced
 
 
+class AuthorityLevel(Enum):
+    """Agent authority levels (CARBON[6] §7.1).
+
+    | Level | Name         | Permissions                              |
+    |-------|-------------|------------------------------------------|
+    | 1     | Observation | Read-only access, no actions              |
+    | 2     | Advisory    | Can suggest actions, no execution         |
+    | 3     | Operational | Execute within pre-approved boundaries    |
+    | 4     | Tactical    | Modify approach within mission parameters |
+    | 5     | Supervisory | Can modify other agents' parameters       |
+    """
+    OBSERVATION = 1
+    ADVISORY = 2
+    OPERATIONAL = 3
+    TACTICAL = 4
+    SUPERVISORY = 5
+
+
+class EscalationLevel(Enum):
+    """Escalation levels (CARBON[6] §7.2).
+
+    | Level | Trigger                  | Response                      |
+    |-------|-------------------------|-------------------------------|
+    | 1     | Soft constraint warning  | Log and continue              |
+    | 2     | Risk threshold exceeded  | Require confirmation          |
+    | 3     | Hard constraint violated | Block and notify operator     |
+    | 4     | Critical safety breach   | Halt all operations           |
+    """
+    LEVEL_1_WARN = 1
+    LEVEL_2_CONFIRM = 2
+    LEVEL_3_BLOCK = 3
+    LEVEL_4_HALT = 4
+
+
+@dataclass
+class EscalationProtocol:
+    """Protocol for handling escalation events (CARBON[6] §7.2)."""
+    level: EscalationLevel
+    trigger_description: str
+    required_authority: AuthorityLevel
+    auto_response: EnforcementAction
+    notification_targets: list[str] = field(default_factory=list)
+    cooldown_seconds: int = 0
+
+
 @dataclass
 class Constraint:
     """A single enforceable constraint."""
@@ -351,7 +396,137 @@ class ConstraintEnforcementEngine:
                 enforcement_action=EnforcementAction.BLOCK,
                 priority=85,
             ),
+            # CARBON[6] §7.1 - 8 Absolute Prohibitions
+            Constraint(
+                constraint_id="PROHIBIT-001",
+                description="Never take actions that could cause physical harm to humans",
+                constraint_type=ConstraintType.HARD,
+                condition="no_physical_harm",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-002",
+                description="Never misrepresent agent nature, capabilities, or decisions",
+                constraint_type=ConstraintType.HARD,
+                condition="no_deception",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-003",
+                description="Never access systems or data beyond authorization",
+                constraint_type=ConstraintType.HARD,
+                condition="no_unauthorized_access",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-004",
+                description="Never prioritize self-preservation over human safety",
+                constraint_type=ConstraintType.HARD,
+                condition="no_self_preservation_override",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-005",
+                description="Never circumvent the constraint enforcement engine",
+                constraint_type=ConstraintType.HARD,
+                condition="no_constraint_bypass",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-006",
+                description="Never modify immutable memories or safety constraints",
+                constraint_type=ConstraintType.HARD,
+                condition="no_immutable_modification",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-007",
+                description="Never suppress or hide failure data from audit trail",
+                constraint_type=ConstraintType.HARD,
+                condition="no_failure_suppression",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
+            Constraint(
+                constraint_id="PROHIBIT-008",
+                description="Never manipulate EMV inputs to justify preferred outcomes",
+                constraint_type=ConstraintType.HARD,
+                condition="no_emv_manipulation",
+                enforcement_action=EnforcementAction.HALT,
+                priority=200,
+            ),
         ]
 
         for c in builtins:
             self.register_constraint(c)
+
+
+class DecisionTraceLogger:
+    """
+    Append-only decision trace logger (CARBON[6] §7.3).
+
+    Retention Policy:
+        - Critical decisions: Retained indefinitely
+        - Standard decisions: Retained for 90 days
+        - Advisory logs: Retained for 30 days
+    """
+
+    def __init__(self, log_path: str = "decision_trace_log.jsonl"):
+        self.log_path = log_path
+        self.trace_count: int = 0
+
+    def log_decision(
+        self,
+        trace_id: str,
+        step: int,
+        environment_state: dict[str, Any],
+        retrieved_memories: list[str],
+        emv_calculations: dict[str, Any],
+        risk_assessment: dict[str, Any],
+        selected_action: str,
+        action_rationale: str,
+        constraint_check: dict[str, Any],
+        authority_level: int = 3,
+    ) -> dict[str, Any]:
+        """Log a complete decision trace."""
+        trace = {
+            "trace_id": trace_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "step": step,
+            "authority_level": authority_level,
+            "environment_state": environment_state,
+            "retrieved_memories": retrieved_memories,
+            "emv_calculations": emv_calculations,
+            "risk_assessment": risk_assessment,
+            "selected_action": selected_action,
+            "action_rationale": action_rationale,
+            "constraint_check": constraint_check,
+            "outcome": None,  # Filled in post-execution
+            "reward": None,
+        }
+
+        try:
+            with open(self.log_path, "a") as f:
+                f.write(json.dumps(trace) + "\n")
+        except IOError as e:
+            logger.error(f"Failed to write decision trace: {e}")
+
+        self.trace_count += 1
+        return trace
+
+    def update_outcome(
+        self,
+        trace_id: str,
+        outcome: dict[str, Any],
+        reward: float,
+    ) -> None:
+        """Update a trace with its outcome (post-execution)."""
+        logger.info(
+            f"Trace {trace_id} outcome: reward={reward:.3f}"
+        )

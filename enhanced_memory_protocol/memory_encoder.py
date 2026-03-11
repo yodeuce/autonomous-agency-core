@@ -2,19 +2,34 @@
 FILE 5: memory_encoder.py
 PURPOSE: Converts raw experience into structured memory
 ROLE: Event -> memory transformation pipeline
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Encoding Pipeline (CARBON[6] §3.2):
+    1. Input Normalization — Standardize input format and structure
+    2. Type Classification — Determine appropriate memory type
+    3. Content Extraction — Extract key information from experience
+    4. Embedding Generation — Create vector representation
+    5. Metadata Assignment — Attach creation metadata and initial salience
+    6. Decay Profile Selection — Assign appropriate decay characteristics
+    7. Validation — Verify against schema before storage
 
 Handles:
 - Event to memory transformation
 - Metadata attachment
 - Confidence estimation
 - Initial salience scoring
+- Batch encoding with parallel processing
+- Schema validation
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -327,3 +342,117 @@ class MemoryEncoder:
         """Generate a deterministic source ID from event content."""
         raw = f"{event.event_type}:{event.timestamp}:{hash(str(event.data))}"
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+    # -------------------------------------------------------------------------
+    # SCHEMA VALIDATION (CARBON[6] §3.2, Step 7)
+    # -------------------------------------------------------------------------
+
+    _schema_cache: dict[str, Any] = {}
+
+    @classmethod
+    def _load_schema(cls) -> dict[str, Any]:
+        """Load and cache the memory schema for validation."""
+        if "memory" not in cls._schema_cache:
+            schema_path = os.path.join(
+                os.path.dirname(__file__), "memory_schema.json"
+            )
+            if os.path.exists(schema_path):
+                with open(schema_path) as f:
+                    cls._schema_cache["memory"] = json.load(f)
+            else:
+                cls._schema_cache["memory"] = None
+        return cls._schema_cache["memory"]
+
+    def _validate_against_schema(self, memory: EncodedMemory) -> bool:
+        """
+        Validate an encoded memory against the schema (Step 7).
+
+        Returns True if valid. Logs warnings for invalid memories.
+        """
+        schema = self._load_schema()
+        if schema is None:
+            return True  # No schema to validate against
+
+        data = memory.to_dict()
+        required = schema.get("required", [])
+        for field_name in required:
+            if field_name not in data or data[field_name] is None:
+                logger.warning(
+                    f"Memory {memory.memory_id} missing required field: {field_name}"
+                )
+                return False
+
+        # Type-specific validation
+        valid_types = ["episodic", "semantic", "strategic", "constraint", "procedural"]
+        if data.get("memory_type") not in valid_types:
+            logger.warning(
+                f"Memory {memory.memory_id} has invalid type: {data.get('memory_type')}"
+            )
+            return False
+
+        return True
+
+
+# =============================================================================
+# BATCH MEMORY ENCODER (CARBON[6] Spec §3.2)
+# =============================================================================
+
+class BatchMemoryEncoder:
+    """
+    Efficient batch processing of multiple experiences.
+
+    Encoding Pipeline (CARBON[6] §3.2):
+        1. Input Normalization — Standardize input format and structure
+        2. Type Classification — Determine appropriate memory type
+        3. Content Extraction — Extract key information from experience
+        4. Embedding Generation — Create vector representation
+        5. Metadata Assignment — Attach creation metadata and initial salience
+        6. Decay Profile Selection — Assign appropriate decay characteristics
+        7. Validation — Verify against schema before storage
+
+    Supports parallel encoding via ThreadPoolExecutor for throughput.
+    """
+
+    def __init__(self, max_workers: int = 4):
+        self.encoder = MemoryEncoder()
+        self.max_workers = max_workers
+
+    def encode_batch(
+        self,
+        experiences: list[RawEvent],
+        parallel: bool = True,
+    ) -> list[EncodedMemory]:
+        """
+        Encode a batch of experiences into structured memories.
+
+        Args:
+            experiences: List of raw events to encode
+            parallel: If True, use ThreadPoolExecutor for parallel encoding
+
+        Returns:
+            List of encoded, validated memories
+        """
+        if not parallel or len(experiences) <= 1:
+            return [self.encoder.encode(exp) for exp in experiences]
+
+        results: list[EncodedMemory] = []
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_exp = {
+                executor.submit(self.encoder.encode, exp): exp
+                for exp in experiences
+            }
+            for future in as_completed(future_to_exp):
+                try:
+                    memory = future.result()
+                    results.append(memory)
+                except Exception as e:
+                    exp = future_to_exp[future]
+                    logger.error(
+                        f"Failed to encode event '{exp.event_type}': {e}"
+                    )
+
+        logger.info(
+            f"Batch encoded {len(results)}/{len(experiences)} experiences "
+            f"(parallel={parallel}, workers={self.max_workers})"
+        )
+        return results

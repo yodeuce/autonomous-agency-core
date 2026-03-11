@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Enhanced Memory Protocol Schema",
   "description": "Canonical structure for all agent memories. Prevents flat memory failures.",
-  "version": "1.0.0",
+  "version": "2.0.0",
 
   "definitions": {
     "memory_type": {
@@ -15,7 +15,7 @@
       "properties": {
         "function": {
           "type": "string",
-          "enum": ["exponential", "linear", "step", "none"],
+          "enum": ["exponential", "power_law", "linear", "step", "none"],
           "description": "Decay function type"
         },
         "half_life_steps": {
@@ -170,6 +170,34 @@
       "format": "uuid",
       "default": null,
       "description": "If set, this memory has been replaced by another"
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["unverified", "verified", "disputed", "retracted"],
+      "default": "unverified",
+      "description": "Verification state of this memory's content"
+    },
+    "derivation_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "derivation_type": {
+            "type": "string",
+            "enum": ["inferred_from", "compressed_from", "corrected_from", "supersedes"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["source_memory_id", "derivation_type"]
+      },
+      "description": "Chain of derivation showing how this memory was produced"
     },
     "compressed": {
       "type": "boolean",

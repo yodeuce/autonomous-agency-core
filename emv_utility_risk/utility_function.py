@@ -2,12 +2,23 @@
 FILE 15: utility_function.py
 PURPOSE: Adjusts EMV for preferences and risk
 ROLE: Advanced agents do not optimize raw EMV
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Available Utility Functions (CARBON[6] §5.2):
+    | Function      | Formula                              | Risk Attitude            |
+    |--------------|--------------------------------------|--------------------------|
+    | Linear       | U(x) = x                            | Risk Neutral             |
+    | Logarithmic  | U(x) = ln(x + 1)                    | Risk Averse (decreasing) |
+    | Exponential  | U(x) = 1 - e^(-αx)                  | Risk Averse (constant)   |
+    | Power (CRRA) | U(x) = x^(1-ρ) / (1-ρ)             | Risk Averse (configurable)|
+    | Prospect     | U(x) = x^α if x≥0, -λ(-x)^β if x<0 | Loss Averse              |
 
 Includes:
 - Risk aversion
 - Loss penalties
 - Tail-risk weighting
 - Non-linear utility curves
+- Adaptive utility (context-aware risk aversion)
 """
 
 from __future__ import annotations
@@ -246,3 +257,83 @@ class UtilityFunction:
                     abs(u) / self.config.loss_aversion
                 ) ** (1.0 / alpha)
         return u
+
+
+# =============================================================================
+# ADAPTIVE UTILITY FUNCTION (CARBON[6] Spec §5.2)
+# =============================================================================
+
+class AdaptiveUtilityFunction(UtilityFunction):
+    """
+    Context-aware utility function that adjusts risk aversion dynamically.
+
+    Increases risk aversion when (CARBON[6] §5.2):
+        - Stakes are high → risk_aversion *= 1.5
+        - Resources are low → risk_aversion *= 1.3
+        - Time pressure is high → risk_aversion *= 1.2
+
+    Usage:
+        adaptive = AdaptiveUtilityFunction()
+        utility = adaptive.compute_adaptive_utility(value=100.0, context={
+            "stakes": 0.9,
+            "resource_availability": 0.2,
+            "time_pressure": 0.8,
+        })
+    """
+
+    def __init__(
+        self,
+        config: UtilityConfig | None = None,
+        high_stakes_threshold: float = 0.7,
+        low_resource_threshold: float = 0.3,
+        high_time_pressure_threshold: float = 0.7,
+    ):
+        super().__init__(config)
+        self.high_stakes_threshold = high_stakes_threshold
+        self.low_resource_threshold = low_resource_threshold
+        self.high_time_pressure_threshold = high_time_pressure_threshold
+
+    def compute_adaptive_utility(
+        self,
+        value: float,
+        context: dict[str, Any],
+    ) -> float:
+        """
+        Compute utility with context-adjusted risk aversion.
+
+        Args:
+            value: Raw monetary/economic value
+            context: Dict with keys: stakes, resource_availability, time_pressure
+
+        Returns:
+            Utility-adjusted value with dynamic risk aversion
+        """
+        adjusted_aversion = self.config.risk_aversion
+
+        if context.get("stakes", 0) > self.high_stakes_threshold:
+            adjusted_aversion *= 1.5
+
+        if context.get("resource_availability", 1.0) < self.low_resource_threshold:
+            adjusted_aversion *= 1.3
+
+        if context.get("time_pressure", 0) > self.high_time_pressure_threshold:
+            adjusted_aversion *= 1.2
+
+        # Use power utility with adjusted risk aversion
+        if value > 0:
+            rho = adjusted_aversion
+            if rho == 1.0:
+                return math.log(max(1e-10, value))
+            return (value ** (1.0 - rho)) / (1.0 - rho)
+        return -abs(value) * adjusted_aversion
+
+    def get_effective_risk_aversion(self, context: dict[str, Any]) -> float:
+        """Return the effective risk aversion for the given context."""
+        aversion = self.config.risk_aversion
+        if context.get("stakes", 0) > self.high_stakes_threshold:
+            aversion *= 1.5
+        if context.get("resource_availability", 1.0) < self.low_resource_threshold:
+            aversion *= 1.3
+        if context.get("time_pressure", 0) > self.high_time_pressure_threshold:
+            aversion *= 1.2
+        return aversion

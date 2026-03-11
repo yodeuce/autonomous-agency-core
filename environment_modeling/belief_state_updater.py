@@ -2,9 +2,27 @@
 FILE 13: belief_state_updater.py
 PURPOSE: Converts observations into beliefs
 ROLE: Required when environment is partially observable
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Update Methods (CARBON[6] §4.4):
+    Bayesian Belief Updater:
+        P(θ|D) ∝ P(D|θ) · P(θ)
+        posterior = likelihood × prior / evidence
+        Used for: Discrete states, categorical variables, hypothesis testing
+
+    Kalman Belief Updater:
+        x̂ₖ = x̂ₖ₋₁ + Kₖ(zₖ - Hx̂ₖ₋₁)
+        Kₖ = Pₖ₋₁Hᵀ(HPₖ₋₁Hᵀ + R)⁻¹
+        Used for: Continuous states, linear dynamics, real-valued estimates
+
+    Exponential Moving Average:
+        x̂ₖ = α · xₖ + (1-α) · x̂ₖ₋₁
+        Used for: Trend tracking, simple smoothing, high-frequency updates
 
 Includes:
 - Bayesian updates
+- Kalman filtering
+- Exponential moving average
 - State estimation
 - Noise filtering
 - Confidence propagation
@@ -242,3 +260,46 @@ class BeliefStateUpdater:
             b.variance = self.config.prior_variance
             b.confidence = 0.5
             b.update_count = 0
+
+    def update_ema(
+        self,
+        variable_name: str,
+        observed_value: float,
+        alpha: float = 0.3,
+    ) -> Belief:
+        """
+        Exponential Moving Average update (CARBON[6] §4.4).
+
+        Formula:
+            x̂ₖ = α · xₖ + (1-α) · x̂ₖ₋₁
+
+        Used for: Trend tracking, simple smoothing, high-frequency updates.
+
+        Args:
+            variable_name: Variable to update
+            observed_value: New observation
+            alpha: Smoothing factor in (0, 1]. Higher = more weight on new data.
+
+        Returns:
+            Updated belief
+        """
+        if variable_name not in self.beliefs:
+            self.initialize_belief(variable_name, prior_mean=observed_value)
+
+        belief = self.beliefs[variable_name]
+
+        # EMA update: x̂ₖ = α · xₖ + (1-α) · x̂ₖ₋₁
+        new_mean = alpha * observed_value + (1.0 - alpha) * belief.mean
+
+        # Variance decreases with each observation
+        belief.variance = max(
+            1e-10,
+            (1.0 - alpha) * belief.variance + alpha * (observed_value - new_mean) ** 2,
+        )
+
+        belief.mean = new_mean
+        belief.confidence = min(1.0, belief.confidence + alpha * 0.1)
+        belief.last_observation = observed_value
+        belief.update_count += 1
+
+        return belief

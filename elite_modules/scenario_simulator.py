@@ -57,6 +57,8 @@ class SimulationSummary:
     success_rate: float
     percentile_5: float
     percentile_95: float
+    percentile_25: float = 0.0
+    percentile_75: float = 0.0
     results: list[SimulationResult] = field(default_factory=list)
 
 
@@ -226,6 +228,58 @@ class ScenarioSimulator:
 
         return results
 
+    def detect_convergence(
+        self,
+        scenario: Scenario,
+        policy_fn: Callable | None = None,
+        max_runs: int = 1000,
+        min_runs: int = 50,
+        tolerance: float = 0.01,
+        window: int = 20,
+    ) -> SimulationSummary:
+        """
+        Run simulations until results converge (CARBON[6] §8.2).
+
+        Convergence: std(last `window` means) / |mean| < tolerance
+
+        Args:
+            scenario: Scenario to simulate
+            policy_fn: Optional policy function
+            max_runs: Maximum simulation runs
+            min_runs: Minimum runs before checking convergence
+            tolerance: Convergence threshold (relative)
+            window: Window size for convergence check
+
+        Returns:
+            SimulationSummary when converged (or at max_runs)
+        """
+        results: list[SimulationResult] = []
+        running_means: list[float] = []
+
+        for run_id in range(max_runs):
+            result = self._run_single(scenario, run_id, 100, policy_fn)
+            results.append(result)
+
+            # Track running mean
+            current_mean = sum(r.total_reward for r in results) / len(results)
+            running_means.append(current_mean)
+
+            # Check convergence
+            if len(running_means) >= min_runs and len(running_means) >= window:
+                recent = running_means[-window:]
+                window_mean = sum(recent) / len(recent)
+                window_var = sum((x - window_mean) ** 2 for x in recent) / len(recent)
+                window_std = window_var ** 0.5
+
+                if abs(window_mean) > 0 and window_std / abs(window_mean) < tolerance:
+                    logger.info(
+                        f"Convergence detected at run {run_id + 1} "
+                        f"(mean={window_mean:.4f}, std={window_std:.4f})"
+                    )
+                    break
+
+        return self._compute_summary(scenario.name, results)
+
     # -------------------------------------------------------------------------
     # INTERNAL SIMULATION
     # -------------------------------------------------------------------------
@@ -329,6 +383,8 @@ class ScenarioSimulator:
         median = rewards[n // 2]
         p5 = rewards[max(0, int(n * 0.05))]
         p95 = rewards[min(n - 1, int(n * 0.95))]
+        p25 = rewards[max(0, int(n * 0.25))]
+        p75 = rewards[min(n - 1, int(n * 0.75))]
 
         success_count = sum(1 for r in results if r.total_reward > 0)
 
@@ -343,6 +399,8 @@ class ScenarioSimulator:
             success_rate=success_count / n,
             percentile_5=p5,
             percentile_95=p95,
+            percentile_25=p25,
+            percentile_75=p75,
             results=results,
         )
 
@@ -375,3 +433,40 @@ class ScenarioSimulator:
         if state.get("task_progress", 0) >= 1.0:
             return True, "task_complete"
         return False, ""
+
+
+# =============================================================================
+# SCENARIO PRESETS (CARBON[6] §8.2)
+# =============================================================================
+
+SCENARIO_PRESETS: dict[str, dict[str, Any]] = {
+    "baseline": {
+        "description": "Normal operating conditions",
+        "state_modifiers": {},
+        "probability_shift": 0.0,
+    },
+    "optimistic": {
+        "description": "Better-than-expected conditions",
+        "state_modifiers": {"task_progress": 0.1, "resource_availability": 0.2},
+        "probability_shift": 0.1,
+    },
+    "pessimistic": {
+        "description": "Worse-than-expected conditions",
+        "state_modifiers": {"task_progress": -0.1, "error_rate": 0.2},
+        "probability_shift": -0.1,
+    },
+    "stress": {
+        "description": "Extreme adverse conditions",
+        "state_modifiers": {"resource_availability": -0.5, "error_rate": 0.5, "system_load": 0.9},
+        "probability_shift": -0.3,
+    },
+}
+
+
+def get_scenario_preset(name: str) -> dict[str, Any]:
+    """Get a scenario preset by name (CARBON[6] §8.2)."""
+    if name not in SCENARIO_PRESETS:
+        raise ValueError(
+            f"Unknown preset '{name}'. Available: {list(SCENARIO_PRESETS.keys())}"
+        )
+    return SCENARIO_PRESETS[name]

@@ -73,6 +73,52 @@ class RetrievalConfig:
     cooldown_steps: int = 5
     over_retrieval_limit: int = 50
     periodic_refresh_interval: int = 100
+    min_salience: float = 0.3
+    max_results: int = 10
+
+
+# =============================================================================
+# RETRIEVAL PRESETS (CARBON[6] Spec §3.4)
+# =============================================================================
+# | Policy       | Salience Threshold | Max Results | Use Case              |
+# |-------------|-------------------|-------------|------------------------|
+# | Standard    | 0.3               | 10          | Normal operations      |
+# | Conservative| 0.5               | 5           | High-stakes decisions  |
+# | Aggressive  | 0.1               | 25          | Exploration, learning  |
+# =============================================================================
+
+RETRIEVAL_PRESETS: dict[str, RetrievalConfig] = {
+    "standard": RetrievalConfig(
+        min_salience=0.3, max_results=10,
+        uncertainty_threshold=0.6, risk_threshold=0.7,
+    ),
+    "conservative": RetrievalConfig(
+        min_salience=0.5, max_results=5,
+        uncertainty_threshold=0.4, risk_threshold=0.5,
+        max_retrievals_per_step=2,
+    ),
+    "aggressive": RetrievalConfig(
+        min_salience=0.1, max_results=25,
+        uncertainty_threshold=0.8, risk_threshold=0.9,
+        max_retrievals_per_step=5,
+    ),
+}
+
+
+def get_retrieval_preset(name: str) -> RetrievalConfig:
+    """
+    Get a retrieval config preset by name.
+
+    Available presets (CARBON[6] §3.4):
+        - 'standard': Normal operations (salience≥0.3, max 10 results)
+        - 'conservative': High-stakes decisions (salience≥0.5, max 5 results)
+        - 'aggressive': Exploration/learning (salience≥0.1, max 25 results)
+    """
+    if name not in RETRIEVAL_PRESETS:
+        raise ValueError(
+            f"Unknown preset '{name}'. Available: {list(RETRIEVAL_PRESETS.keys())}"
+        )
+    return RETRIEVAL_PRESETS[name]
 
 
 class MemoryRetrievalPolicy:

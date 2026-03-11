@@ -2,12 +2,30 @@
 FILE 16: risk_model.py
 PURPOSE: Explicit downside modeling
 ROLE: Separates value from survivability
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Formal Risk Measures (CARBON[6] §5.3):
+    VaR_α(X) = -inf{x : P(X ≤ x) ≥ α}
+        "The maximum loss at confidence level α"
+
+    CVaR_α(X) = E[X | X ≤ VaR_α(X)]
+        "The expected loss given that loss exceeds VaR"
+
+Risk Categories (CARBON[6] §5.3):
+    | Category      | Description                          | Threshold |
+    |--------------|--------------------------------------|-----------|
+    | Operational  | System failures, execution errors    | 0.2       |
+    | Financial    | Budget overruns, resource waste       | 0.3       |
+    | Compliance   | Constraint violations, policy breach  | 0.1       |
+    | Reputational | Trust damage, stakeholder impact      | 0.4       |
+    | Strategic    | Goal misalignment, opportunity cost   | 0.3       |
 
 Includes:
 - CVaR (Conditional Value at Risk)
 - Worst-case loss
 - Constraint violation probability
 - Stress scenarios
+- Risk categorization and classification
 """
 
 from __future__ import annotations
@@ -15,9 +33,19 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class RiskCategory(Enum):
+    """Risk categories (CARBON[6] §5.3)."""
+    OPERATIONAL = "operational"      # System failures, execution errors
+    FINANCIAL = "financial"          # Budget overruns, resource waste
+    COMPLIANCE = "compliance"        # Constraint violations, policy breaches
+    REPUTATIONAL = "reputational"    # Trust damage, stakeholder impact
+    STRATEGIC = "strategic"          # Goal misalignment, opportunity cost
 
 
 @dataclass
@@ -33,6 +61,7 @@ class RiskMetrics:
     sortino_ratio: float | None = None
     max_drawdown: float = 0.0
     risk_level: str = "low"  # low | medium | high | critical
+    risk_category: RiskCategory | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -46,6 +75,7 @@ class RiskMetrics:
             "sortino_ratio": self.sortino_ratio,
             "max_drawdown": self.max_drawdown,
             "risk_level": self.risk_level,
+            "risk_category": self.risk_category.value if self.risk_category else None,
         }
 
 
@@ -308,3 +338,39 @@ class RiskModel:
         elif score < thresholds.get("high", 0.8):
             return "high"
         return "critical"
+
+    def classify_risk_category(
+        self,
+        outcomes: list[dict[str, float]],
+        context: dict[str, Any] | None = None,
+    ) -> RiskCategory:
+        """
+        Classify the primary risk category for a set of outcomes (CARBON[6] §5.3).
+
+        Args:
+            outcomes: List of {probability, payoff} dicts
+            context: Optional context with constraint/execution info
+
+        Returns:
+            The dominant RiskCategory
+        """
+        context = context or {}
+
+        if context.get("constraint_violations"):
+            return RiskCategory.COMPLIANCE
+
+        if context.get("execution_errors"):
+            return RiskCategory.OPERATIONAL
+
+        loss_prob = sum(o["probability"] for o in outcomes if o["payoff"] < 0)
+        expected_loss = sum(
+            o["probability"] * o["payoff"] for o in outcomes if o["payoff"] < 0
+        )
+
+        if context.get("budget_impact", 0) > 0.5 or expected_loss < -20:
+            return RiskCategory.FINANCIAL
+
+        if context.get("stakeholder_impact", 0) > 0.5:
+            return RiskCategory.REPUTATIONAL
+
+        return RiskCategory.STRATEGIC

@@ -2,130 +2,170 @@
 # FILE 1: mdp_spec.yaml
 # PURPOSE: Formal definition of the Markov Decision Process
 # ROLE: Constitutional document of the agent's decision logic
+# SPEC: CARBON[6] Technical Architecture Specification v1.0.0
 # =============================================================================
 
 mdp_specification:
-  version: "1.0.0"
+  version: "2.0.0"
   name: "autonomous_agency_mdp"
-  description: "Core MDP specification for the autonomous AI agency"
+  description: "Core MDP specification for the CARBON[6] autonomous AI agency"
 
   # ---------------------------------------------------------------------------
   # STATE SPACE DEFINITION
+  # Partitioned into observable and latent components
   # ---------------------------------------------------------------------------
   state_space:
-    type: "composite"  # composite | discrete | continuous
-    dimensions:
-      - name: "environment_state"
-        type: "continuous"
-        description: "Observable environment variables vector"
-        bounds: null  # Define per-variable in environment_variable_registry.yaml
+    type: "composite"
+    partially_observable: true
+    observation_model: "belief_state_updater"
 
-      - name: "belief_state"
+    observable_states:
+      - name: "task_status"
+        type: "categorical"
+        values: ["pending", "active", "complete", "failed", "blocked"]
+        description: "Current task execution state"
+
+      - name: "resource_availability"
         type: "continuous"
-        description: "Agent's internal belief about unobserved variables"
         bounds: [0.0, 1.0]
+        description: "Available computational and external resources"
+
+      - name: "constraint_status"
+        type: "binary"
+        values: [true, false]
+        description: "Current constraint satisfaction state"
+
+      - name: "time_remaining"
+        type: "continuous"
+        bounds: [0.0, null]
+        description: "Time until deadline or timeout"
 
       - name: "memory_state"
         type: "discrete"
         description: "Current active memory context hash"
         cardinality: null  # Dynamic based on memory store size
 
-      - name: "resource_state"
-        type: "continuous"
-        description: "Available resources (budget, compute, time)"
-        bounds: [0.0, null]
-
       - name: "risk_state"
         type: "continuous"
-        description: "Current risk exposure level"
         bounds: [0.0, 1.0]
+        description: "Current risk exposure level"
 
-    observable: true
-    partially_observable: true
-    observation_model: "belief_state_updater"
+    latent_states:
+      - name: "user_intent"
+        type: "continuous"
+        inference_method: "bayesian_inference"
+        description: "Inferred user objectives"
+
+      - name: "environment_stability"
+        type: "continuous"
+        bounds: [0.0, 1.0]
+        inference_method: "kalman_filtering"
+        description: "Estimated environment volatility"
+
+      - name: "task_complexity"
+        type: "continuous"
+        bounds: [0.0, 1.0]
+        inference_method: "feature_based_estimation"
+        description: "Estimated difficulty of current task"
 
   # ---------------------------------------------------------------------------
   # ACTION SPACE DEFINITION
+  # Hierarchical action space organized by authority level
   # ---------------------------------------------------------------------------
   action_space:
-    type: "discrete"  # discrete | continuous | hybrid
+    type: "discrete"
     actions:
-      - name: "gather_information"
-        description: "Collect additional data before deciding"
+      - name: "OBSERVE"
+        description: "Gather information from environment without modifying state"
         cost: "low"
         reversible: true
+        min_authority_level: 1  # Observation level
 
-      - name: "execute_task"
-        description: "Execute a primary objective task"
+      - name: "ANALYZE"
+        description: "Process and analyze available information"
+        cost: "low"
+        reversible: true
+        min_authority_level: 2  # Analysis level
+
+      - name: "RECOMMEND"
+        description: "Generate recommendation for human approval"
+        cost: "low"
+        reversible: true
+        min_authority_level: 3  # Recommendation level
+
+      - name: "EXECUTE"
+        description: "Take autonomous action within authorized scope"
         cost: "variable"
         reversible: false
+        min_authority_level: 4  # Autonomous level
 
-      - name: "delegate"
-        description: "Delegate task to sub-agent or external system"
-        cost: "medium"
-        reversible: false
-
-      - name: "wait"
-        description: "Defer action to next timestep"
-        cost: "opportunity_cost"
-        reversible: true
-
-      - name: "escalate"
-        description: "Escalate to human or higher authority"
+      - name: "ESCALATE"
+        description: "Escalate decision to higher authority"
         cost: "low"
         reversible: true
+        min_authority_level: 1  # Any level can escalate
 
-      - name: "update_model"
-        description: "Trigger internal model update cycle"
-        cost: "compute"
+      - name: "DEFER"
+        description: "Postpone action pending additional information"
+        cost: "opportunity_cost"
         reversible: true
-
-      - name: "terminate"
-        description: "End the current episode"
-        cost: "none"
-        reversible: false
+        min_authority_level: 1  # Any level can defer
 
     constraints:
       max_actions_per_step: 1
       forbidden_actions: []  # Populated by constraint_enforcement_engine
 
   # ---------------------------------------------------------------------------
-  # TRANSITION ASSUMPTIONS
+  # TRANSITION MODEL
+  #
+  # Formal: P(s' | s, a) = Σ P(s' | s, a, θ) * P(θ | history)
+  #
+  # Where:
+  #   s'    = next state
+  #   s     = current state
+  #   a     = action taken
+  #   θ     = environment parameters (learned from history)
   # ---------------------------------------------------------------------------
   transition_model:
     type: "learned"  # known | learned | hybrid
     stochastic: true
     markov_assumption: true
-    time_homogeneous: false  # Transitions may change over time
+    time_homogeneous: false
     learning_method: "bayesian_update"
-    confidence_threshold: 0.7  # Minimum confidence to act on transition model
+    confidence_threshold: 0.7
+    formal_definition: "P(s' | s, a) = Σ P(s' | s, a, θ) * P(θ | history)"
 
   # ---------------------------------------------------------------------------
   # REWARD DEFINITION
+  #
+  # EMV Reward: R(s, a, s') = Σ_o P(o | s, a, s') * V(o)
+  # Risk-Adjusted: R_adjusted(s, a) = U(EMV(s, a)) - λ * Risk(s, a)
+  # Multi-Objective: R_total = Σ_i w_i * R_i(s, a), subject to Σ w_i = 1
   # ---------------------------------------------------------------------------
   reward_definition:
-    primary_metric: "emv"  # Expected Monetary/Economic Value
+    primary_metric: "emv"
     reward_source: "reward_model.py"
-    components:
+
+    multi_objective_weights:
       - name: "task_completion"
-        weight: 0.4
-        description: "Reward for completing objectives"
+        weight_range: [0.3, 0.5]
+        default_weight: 0.4
+        description: "Primary task success"
 
-      - name: "efficiency"
-        weight: 0.2
-        description: "Reward for resource-efficient execution"
+      - name: "resource_efficiency"
+        weight_range: [0.1, 0.2]
+        default_weight: 0.15
+        description: "Minimize resource consumption"
 
-      - name: "risk_avoidance"
-        weight: 0.2
-        description: "Penalty avoidance for risky outcomes"
+      - name: "safety_margin"
+        weight_range: [0.2, 0.3]
+        default_weight: 0.25
+        description: "Maintain safety buffer"
 
-      - name: "information_gain"
-        weight: 0.1
-        description: "Reward for reducing uncertainty"
-
-      - name: "alignment"
-        weight: 0.1
-        description: "Reward for adherence to agent constitution"
+      - name: "user_satisfaction"
+        weight_range: [0.1, 0.2]
+        default_weight: 0.2
+        description: "Inferred user preference alignment"
 
     bounds:
       min: -100.0
@@ -133,11 +173,17 @@ mdp_specification:
 
   # ---------------------------------------------------------------------------
   # DISCOUNT FACTOR
+  #
+  # Dynamic discounting based on urgency:
+  #   γ_effective = γ_base * (1 - urgency_factor)
+  #   Where urgency_factor ∈ [0, 0.3] based on deadline proximity
   # ---------------------------------------------------------------------------
   discount:
-    gamma: 0.95
-    description: "Balance between immediate and future rewards"
-    adaptive: false  # Set to true for dynamic discounting
+    gamma_base: 0.95
+    adaptive: true
+    urgency_factor_range: [0.0, 0.3]
+    formula: "γ_effective = γ_base * (1 - urgency_factor)"
+    description: "Balance between immediate and future rewards, adjusted for urgency"
 
   # ---------------------------------------------------------------------------
   # TERMINAL STATES

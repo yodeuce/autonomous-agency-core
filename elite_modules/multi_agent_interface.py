@@ -39,6 +39,24 @@ class MessageType(Enum):
     COORDINATION = "coordination"
 
 
+class CoordinationProtocol(Enum):
+    """Coordination protocols for multi-agent systems (CARBON[6] §8.1).
+
+    | Protocol     | Description                              | Use Case              |
+    |-------------|------------------------------------------|-----------------------|
+    | Hierarchical | Top-down task delegation                 | Clear chain of command |
+    | Democratic   | Voting-based collective decisions         | Peer agents           |
+    | Auction      | Bid-based task allocation                 | Resource allocation   |
+    | Contract Net | Task announcement + bidding protocol      | Dynamic task assignment|
+    | Blackboard   | Shared workspace for incremental solving  | Complex problem solving|
+    """
+    HIERARCHICAL = "hierarchical"
+    DEMOCRATIC = "democratic"
+    AUCTION = "auction"
+    CONTRACT_NET = "contract_net"
+    BLACKBOARD = "blackboard"
+
+
 @dataclass
 class AgentRegistration:
     """Registration record for an agent in the multi-agent system."""
@@ -312,3 +330,75 @@ class MultiAgentInterface:
             },
             priority=10,
         ))
+
+
+class SharedMemoryStore:
+    """
+    Shared memory store for multi-agent coordination (CARBON[6] §8.1).
+
+    Features:
+        - TTL-based expiration
+        - Access Control Lists (ACL)
+        - Conflict resolution for concurrent writes
+    """
+
+    def __init__(self):
+        self.store: dict[str, dict[str, Any]] = {}
+        self.acl: dict[str, list[str]] = {}  # key -> list of allowed agent_ids
+
+    def write(
+        self,
+        key: str,
+        value: Any,
+        agent_id: str,
+        ttl_steps: int | None = None,
+        allowed_readers: list[str] | None = None,
+    ) -> bool:
+        """Write a value to shared memory with optional TTL and ACL."""
+        # Check ACL
+        if key in self.acl and agent_id not in self.acl[key]:
+            logger.warning(f"Agent '{agent_id}' denied write access to key '{key}'")
+            return False
+
+        self.store[key] = {
+            "value": value,
+            "written_by": agent_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "ttl_steps": ttl_steps,
+            "created_step": 0,
+        }
+
+        if allowed_readers is not None:
+            self.acl[key] = allowed_readers + [agent_id]
+
+        return True
+
+    def read(self, key: str, agent_id: str) -> Any | None:
+        """Read a value from shared memory (respects ACL)."""
+        if key not in self.store:
+            return None
+
+        if key in self.acl and agent_id not in self.acl[key]:
+            logger.warning(f"Agent '{agent_id}' denied read access to key '{key}'")
+            return None
+
+        return self.store[key]["value"]
+
+    def expire(self, current_step: int) -> int:
+        """Remove expired entries. Returns count of expired entries."""
+        expired_keys = []
+        for key, entry in self.store.items():
+            ttl = entry.get("ttl_steps")
+            if ttl is not None:
+                if current_step - entry.get("created_step", 0) > ttl:
+                    expired_keys.append(key)
+
+        for key in expired_keys:
+            del self.store[key]
+            if key in self.acl:
+                del self.acl[key]
+
+        return len(expired_keys)
+
+    def keys(self) -> list[str]:
+        return list(self.store.keys())

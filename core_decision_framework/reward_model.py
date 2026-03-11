@@ -2,12 +2,37 @@
 FILE 3: reward_model.py
 PURPOSE: Encodes EMV into machine-usable rewards
 ROLE: This is where EMV becomes executable
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Formal Reward Definitions:
+    EMV Reward:
+        R(s, a, s') = Σ_o P(o | s, a, s') * V(o)
+        Where: o = outcome, P = probability, V = monetary value
+
+    Risk-Adjusted Reward:
+        R_adjusted(s, a) = U(EMV(s, a)) - λ * Risk(s, a)
+        Where: U() = utility function, λ = risk aversion coefficient,
+               Risk() = risk measure (VaR, CVaR, variance)
+
+    Multi-Objective Reward:
+        R_total = Σ_i w_i * R_i(s, a)
+        Subject to: Σ w_i = 1, w_i ≥ 0
+
+    Multi-Objective Weight Ranges (CARBON[6] §2.3):
+        | Objective           | Weight Range | Description                      |
+        |---------------------|-------------|----------------------------------|
+        | Task Completion     | 0.3 - 0.5  | Primary task success             |
+        | Resource Efficiency | 0.1 - 0.2  | Minimize resource consumption    |
+        | Safety Margin       | 0.2 - 0.3  | Maintain safety buffer           |
+        | User Satisfaction   | 0.1 - 0.2  | Inferred user preference alignment|
 
 Contains:
 - Immediate reward calculation
 - Long-term reward aggregation
 - Penalties for constraint violations
 - Reward shaping logic
+- Risk-adjusted reward model
+- Multi-objective reward model
 """
 
 from __future__ import annotations
@@ -345,3 +370,172 @@ class RewardModel:
             "min": min(rewards),
             "max": max(rewards),
         }
+
+
+# =============================================================================
+# RISK-ADJUSTED REWARD MODEL (CARBON[6] Spec §2.3)
+# =============================================================================
+
+class RiskAdjustedRewardModel(RewardModel):
+    """
+    Risk-adjusted reward model that incorporates utility and risk.
+
+    Formal Definition:
+        R_adjusted(s, a) = U(EMV(s, a)) - λ * Risk(s, a)
+
+    Where:
+        U()    = utility function (e.g., CRRA, exponential)
+        λ      = risk aversion coefficient
+        Risk() = risk measure (VaR, CVaR, variance)
+    """
+
+    def __init__(
+        self,
+        config: RewardConfig | None = None,
+        utility_fn: Any = None,
+        risk_model: Any = None,
+        risk_aversion: float = 0.5,
+    ):
+        super().__init__(config)
+        self.utility_fn = utility_fn
+        self.risk_model = risk_model
+        self.risk_aversion = risk_aversion
+
+    def compute_risk_adjusted_reward(
+        self,
+        state: dict[str, Any],
+        action: str,
+        next_state: dict[str, Any],
+        outcome: dict[str, Any],
+    ) -> float:
+        """
+        Compute risk-adjusted reward: R_adjusted = U(EMV) - λ * Risk
+
+        Args:
+            state: State before the action
+            action: Action taken
+            next_state: Resulting state
+            outcome: Observed outcome metadata
+
+        Returns:
+            Risk-adjusted scalar reward
+        """
+        # Base EMV reward
+        emv_reward = self.compute_immediate_reward(state, action, next_state, outcome)
+
+        # Apply utility transformation
+        if self.utility_fn is not None:
+            utility_reward = self.utility_fn.compute_utility(emv_reward)
+        else:
+            utility_reward = emv_reward
+
+        # Apply risk penalty
+        risk_penalty = 0.0
+        if self.risk_model is not None:
+            outcomes = outcome.get("outcome_distribution", [])
+            if outcomes:
+                metrics = self.risk_model.compute_risk_metrics(outcomes)
+                risk_penalty = self.risk_aversion * abs(metrics.cvar)
+
+        adjusted = utility_reward - risk_penalty
+
+        # Clamp to bounds
+        return max(
+            self.config.reward_bounds[0],
+            min(self.config.reward_bounds[1], adjusted),
+        )
+
+
+# =============================================================================
+# MULTI-OBJECTIVE REWARD MODEL (CARBON[6] Spec §2.3)
+# =============================================================================
+
+@dataclass
+class ObjectiveWeight:
+    """A single objective with configurable weight range."""
+    name: str
+    weight: float
+    weight_range: tuple[float, float]
+    description: str = ""
+
+    def validate(self) -> bool:
+        lo, hi = self.weight_range
+        return lo <= self.weight <= hi
+
+
+class MultiObjectiveRewardModel:
+    """
+    Multi-objective reward with configurable weights per CARBON[6] spec.
+
+    Formal Definition:
+        R_total = Σ_i w_i * R_i(s, a)
+        Subject to: Σ w_i = 1, w_i ≥ 0
+
+    Default Objectives (CARBON[6] §2.3):
+        | Objective           | Weight Range | Default |
+        |---------------------|-------------|---------|
+        | Task Completion     | 0.3 - 0.5  | 0.40    |
+        | Resource Efficiency | 0.1 - 0.2  | 0.15    |
+        | Safety Margin       | 0.2 - 0.3  | 0.25    |
+        | User Satisfaction   | 0.1 - 0.2  | 0.20    |
+    """
+
+    DEFAULT_OBJECTIVES = [
+        ObjectiveWeight("task_completion", 0.40, (0.3, 0.5), "Primary task success"),
+        ObjectiveWeight("resource_efficiency", 0.15, (0.1, 0.2), "Minimize resource consumption"),
+        ObjectiveWeight("safety_margin", 0.25, (0.2, 0.3), "Maintain safety buffer"),
+        ObjectiveWeight("user_satisfaction", 0.20, (0.1, 0.2), "Inferred user preference alignment"),
+    ]
+
+    def __init__(self, objectives: list[ObjectiveWeight] | None = None):
+        self.objectives = objectives or list(self.DEFAULT_OBJECTIVES)
+        self._validate_weights()
+        self.reward_functions: dict[str, Any] = {}
+
+    def _validate_weights(self) -> None:
+        total = sum(o.weight for o in self.objectives)
+        if abs(total - 1.0) > 0.01:
+            logger.warning(f"Objective weights sum to {total:.3f}, normalizing to 1.0")
+            for o in self.objectives:
+                o.weight /= total
+
+    def register_reward_function(self, objective_name: str, fn: Any) -> None:
+        """Register a reward function for a specific objective."""
+        self.reward_functions[objective_name] = fn
+
+    def compute_multi_objective_reward(
+        self,
+        state: dict[str, Any],
+        action: str,
+        next_state: dict[str, Any],
+        outcome: dict[str, Any],
+    ) -> float:
+        """
+        Compute R_total = Σ_i w_i * R_i(s, a)
+
+        Returns:
+            Weighted sum of objective rewards
+        """
+        total = 0.0
+        for obj in self.objectives:
+            fn = self.reward_functions.get(obj.name)
+            if fn is not None:
+                r_i = fn(state, action, next_state, outcome)
+            else:
+                r_i = outcome.get(f"{obj.name}_reward", 0.0)
+            total += obj.weight * r_i
+        return total
+
+    def set_weight(self, objective_name: str, weight: float) -> None:
+        """Set the weight for an objective (must be within range)."""
+        for obj in self.objectives:
+            if obj.name == objective_name:
+                lo, hi = obj.weight_range
+                if weight < lo or weight > hi:
+                    raise ValueError(
+                        f"Weight {weight} for '{objective_name}' outside range [{lo}, {hi}]"
+                    )
+                obj.weight = weight
+                self._validate_weights()
+                return
+        raise KeyError(f"Unknown objective: {objective_name}")

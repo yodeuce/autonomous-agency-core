@@ -31,6 +31,9 @@ class FailureCategory(Enum):
     POLICY_FAILURE = "policy_failure"
     EXECUTION_ERROR = "execution_error"
     EXTERNAL_SHOCK = "external_shock"
+    INFORMATION_FAILURE = "information_failure"
+    ESTIMATION_ERROR = "estimation_error"
+    GOAL_MISALIGNMENT = "goal_misalignment"
 
 
 class Severity(Enum):
@@ -213,6 +216,51 @@ class FailureAnalysisModule:
             "avg_emv_gap": total_gap / len(self.analysis_history),
             "recurring_patterns": self.get_recurring_failures(),
         }
+
+    def get_policy_response(self, category: FailureCategory) -> dict[str, Any]:
+        """
+        Get the recommended policy response for a failure category (CARBON[6] §6.2).
+
+        Policy Responses:
+            | Category             | Response                              |
+            |---------------------|---------------------------------------|
+            | Information Failure | Increase observation frequency         |
+            | Estimation Error    | Adjust model parameters, increase data |
+            | Execution Failure   | Retry with modified parameters         |
+            | Goal Misalignment   | Escalate for human review             |
+        """
+        responses = {
+            FailureCategory.INFORMATION_FAILURE: {
+                "action": "increase_observation",
+                "description": "Increase observation frequency and broaden data sources",
+                "urgency": "medium",
+            },
+            FailureCategory.ESTIMATION_ERROR: {
+                "action": "adjust_model",
+                "description": "Adjust model parameters and increase training data",
+                "urgency": "medium",
+            },
+            FailureCategory.EXECUTION_ERROR: {
+                "action": "retry_modified",
+                "description": "Retry with modified parameters or alternative approach",
+                "urgency": "high",
+            },
+            FailureCategory.GOAL_MISALIGNMENT: {
+                "action": "escalate",
+                "description": "Escalate to human operator for objective review",
+                "urgency": "critical",
+            },
+            FailureCategory.CONSTRAINT_VIOLATION: {
+                "action": "halt_and_review",
+                "description": "Halt action and review constraint enforcement",
+                "urgency": "critical",
+            },
+        }
+        return responses.get(category, {
+            "action": "investigate",
+            "description": "Investigate failure root cause",
+            "urgency": "low",
+        })
 
     # -------------------------------------------------------------------------
     # CATEGORIZATION

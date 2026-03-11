@@ -2,12 +2,23 @@
 FILE 14: emv_calculator.py
 PURPOSE: Computes Expected Monetary/Economic Value
 ROLE: The core decision metric engine
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
+
+Formal EMV Definition (CARBON[6] §5.1):
+    EMV(a) = Σᵢ P(oᵢ | a) × V(oᵢ)
+
+    Where:
+        a       = action under consideration
+        oᵢ      = possible outcome i
+        P(oᵢ|a) = probability of outcome given action
+        V(oᵢ)   = monetary value of outcome
 
 Logic:
-- Outcome enumeration
+- Outcome enumeration via OutcomeEnumerator
 - Probability estimation
 - Payoff calculation
 - Discounting
+- Action comparison with ActionRanking
 """
 
 from __future__ import annotations
@@ -30,6 +41,15 @@ class Outcome:
 
     def weighted_payoff(self) -> float:
         return self.probability * self.payoff
+
+
+@dataclass
+class ActionRanking:
+    """Result of comparing multiple actions by EMV (CARBON[6] §5.1)."""
+    best_action: str
+    scores: dict[str, float]
+    margin: float  # EMV difference between best and second-best
+    ranked_results: list["EMVResult"] = field(default_factory=list)
 
 
 @dataclass
@@ -121,15 +141,15 @@ class EMVCalculator:
     def compare_actions(
         self,
         action_outcomes: dict[str, list[Outcome]],
-    ) -> list[EMVResult]:
+    ) -> ActionRanking:
         """
-        Compare multiple actions by their EMV.
+        Compare multiple actions by their EMV (CARBON[6] §5.1).
 
         Args:
             action_outcomes: {action_name: [outcomes]}
 
         Returns:
-            List of EMVResults sorted by EMV descending
+            ActionRanking with best action, scores, and margin
         """
         results = []
         for action, outcomes in action_outcomes.items():
@@ -137,7 +157,20 @@ class EMVCalculator:
             results.append(result)
 
         results.sort(key=lambda r: r.emv, reverse=True)
-        return results
+        scores = {r.action: r.emv for r in results}
+
+        margin = (
+            results[0].emv - results[1].emv
+            if len(results) > 1
+            else float("inf")
+        )
+
+        return ActionRanking(
+            best_action=results[0].action,
+            scores=scores,
+            margin=margin,
+            ranked_results=results,
+        )
 
     def compute_marginal_emv(
         self,
@@ -212,3 +245,96 @@ class EMVCalculator:
         spread_factor = 1.0 - (max_prob - (1.0 / len(outcomes)))
 
         return min(1.0, (count_factor + spread_factor) / 2.0)
+
+
+# =============================================================================
+# OUTCOME ENUMERATOR (CARBON[6] Spec §5.1)
+# =============================================================================
+
+class OutcomeEnumerator:
+    """
+    Generates probability-weighted outcome sets from transition models.
+
+    Process (CARBON[6] §5.1):
+        1. Generate base outcomes from transition model
+        2. Expand with uncertainty
+        3. Normalize probabilities
+    """
+
+    def enumerate(
+        self,
+        state: dict[str, Any],
+        action: str,
+        transition_model: Any = None,
+    ) -> list[Outcome]:
+        """
+        Enumerate possible outcomes for a state-action pair.
+
+        Args:
+            state: Current state
+            action: Action under consideration
+            transition_model: Model predicting outcomes (optional)
+
+        Returns:
+            List of Outcomes with normalized probabilities
+        """
+        if transition_model is not None and hasattr(transition_model, "predict_outcomes"):
+            base_outcomes = transition_model.predict_outcomes(state, action)
+        else:
+            base_outcomes = self._default_outcomes(state, action)
+
+        expanded = self.expand_uncertainty(base_outcomes)
+        return self._normalize_probabilities(expanded)
+
+    def expand_uncertainty(
+        self,
+        outcomes: list[Outcome],
+        uncertainty_factor: float = 0.1,
+    ) -> list[Outcome]:
+        """
+        Expand outcomes to account for uncertainty.
+        Adds pessimistic and optimistic variants for each outcome.
+        """
+        if uncertainty_factor <= 0:
+            return outcomes
+
+        expanded = list(outcomes)
+        for o in outcomes:
+            if o.probability > uncertainty_factor * 2:
+                shift = o.payoff * uncertainty_factor
+                # Pessimistic variant
+                expanded.append(Outcome(
+                    name=f"{o.name}_pessimistic",
+                    probability=o.probability * uncertainty_factor,
+                    payoff=o.payoff - abs(shift),
+                    description=f"Pessimistic variant of {o.name}",
+                ))
+                # Optimistic variant
+                expanded.append(Outcome(
+                    name=f"{o.name}_optimistic",
+                    probability=o.probability * uncertainty_factor,
+                    payoff=o.payoff + abs(shift),
+                    description=f"Optimistic variant of {o.name}",
+                ))
+                # Reduce original probability
+                o.probability *= (1.0 - 2.0 * uncertainty_factor)
+
+        return expanded
+
+    def _normalize_probabilities(self, outcomes: list[Outcome]) -> list[Outcome]:
+        """Normalize probabilities to sum to 1.0."""
+        total = sum(o.probability for o in outcomes)
+        if total > 0:
+            for o in outcomes:
+                o.probability /= total
+        return outcomes
+
+    def _default_outcomes(
+        self, state: dict[str, Any], action: str
+    ) -> list[Outcome]:
+        """Generate default outcomes when no transition model is available."""
+        return [
+            Outcome("success", 0.6, 10.0, "Action succeeds"),
+            Outcome("partial", 0.25, 3.0, "Partial success"),
+            Outcome("failure", 0.15, -5.0, "Action fails"),
+        ]

@@ -6,6 +6,10 @@ from .constraint_enforcement_engine import (
     ConstraintType,
     EnforcementAction,
     EnforcementResult,
+    AuthorityLevel,
+    EscalationLevel,
+    EscalationProtocol,
+    DecisionTraceLogger,
 )
 
 __all__ = [
@@ -14,4 +18,8 @@ __all__ = [
     "ConstraintType",
     "EnforcementAction",
     "EnforcementResult",
+    "AuthorityLevel",
+    "EscalationLevel",
+    "EscalationProtocol",
+    "DecisionTraceLogger",
 ]

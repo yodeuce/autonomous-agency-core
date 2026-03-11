@@ -2,12 +2,27 @@
 FILE 2: policy_definition.py
 PURPOSE: Defines how actions are selected
 ROLE: Without this, the agent has no coherent behavior
+SPEC: CARBON[6] Technical Architecture Specification v1.0.0
 
 Supports:
 - Deterministic or stochastic policy
 - Exploration vs exploitation rules
 - Constraints on actions
 - Policy versioning
+- PolicyManager orchestration
+
+Formal Policy Definitions:
+    Deterministic:
+        π(s) = a*  where a* = argmax_a Q(s, a)
+
+    Stochastic (Boltzmann):
+        π(a|s) = exp(Q(s,a)/τ) / Σ_a' exp(Q(s,a')/τ)
+        Where τ = temperature parameter controlling exploration
+
+    Epsilon-Greedy:
+        π(a|s) = { 1-ε+ε/|A|  if a = argmax Q(s,a)
+                  { ε/|A|      otherwise
+        ε_t = max(ε_min, ε_0 * decay^t)
 """
 
 from __future__ import annotations
@@ -339,3 +354,116 @@ def create_policy(
         constraints=constraints,
         **kwargs,
     )
+
+
+# =============================================================================
+# POLICY MANAGER (CARBON[6] Spec §2.2)
+# =============================================================================
+
+class PolicyManager:
+    """
+    Orchestrates policy selection and enforcement.
+
+    The PolicyManager is the central coordinator for action selection:
+        1. Pre-filter actions through constraint engine
+        2. Apply active policy to select from valid actions
+        3. Log decision for audit
+
+    Supports runtime policy switching and authority-level enforcement.
+
+    Usage:
+        manager = PolicyManager(
+            policy=create_policy("epsilon_greedy", action_space),
+            constraint_engine=constraint_engine,
+            decision_log=trace_logger,
+        )
+        action = manager.select_action(state)
+    """
+
+    def __init__(
+        self,
+        policy: BasePolicy,
+        constraint_engine: Any = None,
+        decision_log: Any = None,
+        authority_level: int = 4,
+    ):
+        self.active_policy = policy
+        self.constraint_engine = constraint_engine
+        self.decision_log = decision_log
+        self.authority_level = authority_level
+        self.policy_registry: dict[str, BasePolicy] = {
+            policy.policy_type.value: policy,
+        }
+
+    def register_policy(self, name: str, policy: BasePolicy) -> None:
+        """Register a policy for runtime switching."""
+        self.policy_registry[name] = policy
+
+    def switch_policy(self, name: str) -> None:
+        """Switch the active policy at runtime."""
+        if name not in self.policy_registry:
+            raise ValueError(f"Unknown policy '{name}'. Available: {list(self.policy_registry.keys())}")
+        self.active_policy = self.policy_registry[name]
+        logger.info(f"Switched active policy to '{name}'")
+
+    def select_action(self, state: dict[str, Any]) -> str:
+        """
+        Select an action through the full orchestration pipeline.
+
+        Flow:
+            1. Get all actions from the policy's action space
+            2. Pre-filter through constraint engine (if available)
+            3. Filter by authority level
+            4. Apply active policy to select from valid actions
+            5. Log the decision for audit
+        """
+        all_actions = self.active_policy.action_space
+
+        # Step 1: Constraint filtering
+        if self.constraint_engine is not None:
+            valid_actions = []
+            for action in all_actions:
+                result = self.constraint_engine.check(action, state)
+                if result.allowed:
+                    valid_actions.append(action)
+        else:
+            valid_actions = list(all_actions)
+
+        # Step 2: Authority level filtering
+        authority_requirements = {
+            "OBSERVE": 1, "ANALYZE": 2, "RECOMMEND": 3,
+            "EXECUTE": 4, "ESCALATE": 1, "DEFER": 1,
+        }
+        valid_actions = [
+            a for a in valid_actions
+            if authority_requirements.get(a.upper(), 0) <= self.authority_level
+        ]
+
+        if not valid_actions:
+            logger.warning("No valid actions after filtering. Defaulting to ESCALATE.")
+            return "ESCALATE"
+
+        # Step 3: Temporarily override the policy's action space
+        original_space = self.active_policy.action_space
+        self.active_policy.action_space = valid_actions
+        action = self.active_policy.select_action(state)
+        self.active_policy.action_space = original_space
+
+        # Step 4: Log decision
+        if self.decision_log is not None:
+            self.decision_log.log_decision({
+                "state_snapshot": state,
+                "action_considered": valid_actions,
+                "action_selected": action,
+                "policy_used": self.active_policy.policy_type.value,
+                "authority_level": self.authority_level,
+            })
+
+        return action
+
+    def set_authority_level(self, level: int) -> None:
+        """Set the agent's authority level (1-5)."""
+        if level < 1 or level > 5:
+            raise ValueError("Authority level must be between 1 and 5")
+        self.authority_level = level
+        logger.info(f"Authority level set to {level}")

@@ -7,13 +7,61 @@
 # Reliability Score
 # =============================================================================
 
-registry_version: "1.0.0"
+registry_version: "2.0.0"
 last_updated: "2026-03-10T00:00:00Z"
+
+# =============================================================================
+# VARIABLE CATEGORIES (CARBON[6] §4)
+# =============================================================================
+# Task Variables: task_status, task_queue_depth, time_remaining
+# Agent Variables: resource_budget_remaining, authority_level, learning_rate
+# Derived Variables: environment_regime, model_drift, hidden_risk_factor
+# =============================================================================
 
 # =============================================================================
 # OBSERVABLE VARIABLES
 # =============================================================================
 observable_variables:
+
+  - name: "task_status"
+    type: "categorical"
+    range: ["pending", "in_progress", "completed", "failed", "blocked"]
+    volatility: "high"
+    source: "task_management_api"
+    update_cadence: "per_step"
+    reliability_score: 0.95
+    description: "Current status of the active task"
+    category: "task"
+
+  - name: "constraint_status"
+    type: "categorical"
+    range: ["all_satisfied", "warning", "violation", "critical"]
+    volatility: "medium"
+    source: "constraint_enforcement_engine"
+    update_cadence: "per_step"
+    reliability_score: 1.0
+    description: "Status of constraint satisfaction"
+    category: "agent"
+
+  - name: "time_remaining"
+    type: "continuous"
+    range: [0.0, null]
+    volatility: "low"
+    source: "task_management_api"
+    update_cadence: "per_step"
+    reliability_score: 0.95
+    description: "Time remaining for current task/episode"
+    category: "task"
+
+  - name: "authority_level"
+    type: "discrete"
+    range: [1, 5]
+    volatility: "low"
+    source: "governance_module"
+    update_cadence: "on_change"
+    reliability_score: 1.0
+    description: "Current agent authority level (1=Observation, 5=Supervisory)"
+    category: "agent"
 
   - name: "task_queue_depth"
     type: "discrete"

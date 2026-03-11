@@ -7,9 +7,17 @@ from .policy_definition import (
     BoltzmannPolicy,
     ActionConstraint,
     PolicyType,
+    PolicyManager,
     create_policy,
 )
-from .reward_model import RewardModel, RewardConfig, RewardSignal
+from .reward_model import (
+    RewardModel,
+    RewardConfig,
+    RewardSignal,
+    RiskAdjustedRewardModel,
+    MultiObjectiveRewardModel,
+    ObjectiveWeight,
+)
 
 __all__ = [
     "BasePolicy",
@@ -18,8 +26,12 @@ __all__ = [
     "BoltzmannPolicy",
     "ActionConstraint",
     "PolicyType",
+    "PolicyManager",
     "create_policy",
     "RewardModel",
     "RewardConfig",
     "RewardSignal",
+    "RiskAdjustedRewardModel",
+    "MultiObjectiveRewardModel",
+    "ObjectiveWeight",
 ]
