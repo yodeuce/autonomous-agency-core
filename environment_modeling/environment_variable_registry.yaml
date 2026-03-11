@@ -1,0 +1,138 @@
+# =============================================================================
+# FILE 11: environment_variable_registry.yaml
+# PURPOSE: Authoritative list of environment variables
+# ROLE: Prevents implicit assumptions about the environment
+#
+# For each variable: Name, Type, Range, Volatility, Source, Update Cadence,
+# Reliability Score
+# =============================================================================
+
+registry_version: "1.0.0"
+last_updated: "2026-03-10T00:00:00Z"
+
+# =============================================================================
+# OBSERVABLE VARIABLES
+# =============================================================================
+observable_variables:
+
+  - name: "task_queue_depth"
+    type: "discrete"
+    range: [0, 10000]
+    volatility: "high"
+    source: "task_management_api"
+    update_cadence: "per_step"
+    reliability_score: 0.95
+    description: "Number of pending tasks in the queue"
+
+  - name: "resource_budget_remaining"
+    type: "continuous"
+    range: [0.0, null]
+    volatility: "medium"
+    source: "resource_tracker"
+    update_cadence: "per_step"
+    reliability_score: 0.99
+    description: "Remaining budget for operations"
+
+  - name: "time_elapsed"
+    type: "continuous"
+    range: [0.0, null]
+    volatility: "low"
+    source: "system_clock"
+    update_cadence: "per_step"
+    reliability_score: 1.0
+    description: "Time elapsed since episode start"
+
+  - name: "error_rate"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "monitoring_system"
+    update_cadence: "per_step"
+    reliability_score: 0.9
+    description: "Current error rate across operations"
+
+  - name: "external_api_latency"
+    type: "continuous"
+    range: [0.0, 60000.0]  # milliseconds
+    volatility: "high"
+    source: "api_monitor"
+    update_cadence: "per_step"
+    reliability_score: 0.85
+    description: "Average latency of external API calls"
+
+  - name: "system_load"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "high"
+    source: "infrastructure_monitor"
+    update_cadence: "every_10_steps"
+    reliability_score: 0.9
+    description: "Current system resource utilization"
+
+# =============================================================================
+# PARTIALLY OBSERVABLE VARIABLES
+# =============================================================================
+partially_observable_variables:
+
+  - name: "market_sentiment"
+    type: "continuous"
+    range: [-1.0, 1.0]
+    volatility: "high"
+    source: "sentiment_analysis_pipeline"
+    update_cadence: "every_100_steps"
+    reliability_score: 0.6
+    description: "Estimated market/user sentiment"
+    noise_model: "gaussian"
+    noise_std: 0.2
+
+  - name: "competitor_activity"
+    type: "categorical"
+    range: ["low", "medium", "high", "aggressive"]
+    volatility: "medium"
+    source: "competitive_intelligence"
+    update_cadence: "every_1000_steps"
+    reliability_score: 0.5
+    description: "Estimated level of competitive activity"
+
+  - name: "user_satisfaction"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "feedback_aggregator"
+    update_cadence: "every_100_steps"
+    reliability_score: 0.65
+    description: "Estimated user/stakeholder satisfaction"
+    noise_model: "gaussian"
+    noise_std: 0.15
+
+# =============================================================================
+# LATENT VARIABLES
+# =============================================================================
+latent_variables:
+
+  - name: "hidden_risk_factor"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "unknown"
+    source: "inferred"
+    update_cadence: "per_belief_update"
+    reliability_score: 0.3
+    description: "Unobserved risk factors estimated via Bayesian inference"
+
+  - name: "environment_regime"
+    type: "categorical"
+    range: ["stable", "volatile", "crisis", "opportunity"]
+    volatility: "low"
+    source: "inferred"
+    update_cadence: "per_belief_update"
+    reliability_score: 0.4
+    description: "Current macro environment regime"
+
+  - name: "model_drift"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "low"
+    source: "inferred"
+    update_cadence: "every_1000_steps"
+    reliability_score: 0.35
+    description: "Degree to which the environment has drifted from training distribution"

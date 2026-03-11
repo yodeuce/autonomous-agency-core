@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enhanced Memory Protocol Schema",
+  "description": "Canonical structure for all agent memories. Prevents flat memory failures.",
+  "version": "1.0.0",
+
+  "definitions": {
+    "memory_type": {
+      "type": "string",
+      "enum": ["episodic", "semantic", "strategic", "constraint", "procedural"],
+      "description": "Classification of the memory"
+    },
+    "decay_profile": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "enum": ["exponential", "linear", "step", "none"],
+          "description": "Decay function type"
+        },
+        "half_life_steps": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Steps until memory salience halves"
+        },
+        "minimum_salience": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Floor below which memory is eligible for pruning"
+        },
+        "immune": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, memory never decays (immutable memories)"
+        }
+      },
+      "required": ["function"]
+    }
+  },
+
+  "type": "object",
+  "properties": {
+    "memory_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this memory"
+    },
+    "memory_type": {
+      "$ref": "#/definitions/memory_type"
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Human-readable summary of the memory"
+        },
+        "data": {
+          "type": "object",
+          "description": "Structured data payload of the memory"
+        },
+        "embedding_vector": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Vector embedding for similarity retrieval"
+        }
+      },
+      "required": ["summary"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of memory creation"
+    },
+    "last_accessed": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this memory was retrieved"
+    },
+    "access_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of times this memory has been retrieved"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Confidence in the accuracy of this memory"
+    },
+    "salience_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Current importance/priority score"
+    },
+    "utility_relevance": {
+      "type": "number",
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "description": "How relevant this memory is to current EMV objectives"
+    },
+    "risk_impact": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Degree to which this memory relates to risk assessment"
+    },
+    "source_provenance": {
+      "type": "object",
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": ["direct_experience", "observation", "inference", "external_input", "human_instruction"],
+          "description": "How this memory was acquired"
+        },
+        "source_id": {
+          "type": "string",
+          "description": "Identifier of the source (episode ID, API, human, etc.)"
+        },
+        "reliability": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Estimated reliability of the source"
+        }
+      },
+      "required": ["source_type"]
+    },
+    "decay_profile": {
+      "$ref": "#/definitions/decay_profile"
+    },
+    "associations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": ["causes", "caused_by", "similar_to", "contradicts", "supersedes", "supports"]
+          },
+          "strength": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "required": ["memory_id", "relationship"]
+      },
+      "description": "Links to related memories"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Categorical tags for retrieval"
+    },
+    "is_immutable": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this memory cannot be modified or deleted"
+    },
+    "superseded_by": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "default": null,
+      "description": "If set, this memory has been replaced by another"
+    },
+    "compressed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this memory has been compressed from its original form"
+    },
+    "original_memory_ids": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "If compressed, the IDs of memories that were merged"
+    }
+  },
+  "required": [
+    "memory_id",
+    "memory_type",
+    "content",
+    "timestamp",
+    "confidence_score",
+    "salience_score",
+    "source_provenance",
+    "decay_profile"
+  ]
+}

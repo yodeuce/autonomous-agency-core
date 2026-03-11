@@ -1,0 +1,271 @@
+# ENVIRONMENT VARIABLE REGISTRY
+# Authoritative list of environment variables
+# Version: 1.0.0
+# Classification: CARBON[6] AUTONOMOUS AGENCY
+#
+# This prevents implicit assumptions about the environment.
+# All environment variables must be registered here.
+
+registry_version: "1.0.0"
+agent_id: "${AGENT_ID}"
+created: "${TIMESTAMP}"
+last_validated: "${TIMESTAMP}"
+
+# =============================================================================
+# TASK CONTEXT VARIABLES
+# Variables related to current task execution
+# =============================================================================
+task_variables:
+
+  - name: "task_context"
+    type: "categorical"
+    values: ["idle", "planning", "executing", "reviewing", "escalating"]
+    volatility: "high"
+    source: "internal"
+    update_cadence: "real_time"
+    reliability_score: 0.99
+    description: "Current phase of task execution"
+
+  - name: "task_type"
+    type: "categorical"
+    values: ["informational", "transactional", "analytical", "creative", "operational"]
+    volatility: "low"
+    source: "inference"
+    update_cadence: "on_task_start"
+    reliability_score: 0.85
+    description: "Classification of current task"
+
+  - name: "task_complexity"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "low"
+    source: "estimation"
+    update_cadence: "on_task_start"
+    reliability_score: 0.75
+    description: "Estimated complexity of current task"
+
+  - name: "task_progress"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "internal"
+    update_cadence: "high_frequency"
+    reliability_score: 0.90
+    description: "Progress toward task completion"
+
+# =============================================================================
+# USER CONTEXT VARIABLES
+# Variables related to user state and preferences
+# =============================================================================
+user_variables:
+
+  - name: "user_urgency"
+    type: "ordinal"
+    values: ["low", "normal", "high", "critical"]
+    volatility: "medium"
+    source: "user_input"
+    update_cadence: "on_request"
+    reliability_score: 0.95
+    description: "User-indicated urgency level"
+
+  - name: "user_intent"
+    type: "categorical"
+    values: ["informational", "transactional", "analytical", "creative"]
+    volatility: "medium"
+    source: "inference"
+    update_cadence: "high_frequency"
+    reliability_score: 0.70
+    description: "Inferred user intent (latent variable)"
+
+  - name: "user_satisfaction"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "inference"
+    update_cadence: "on_interaction"
+    reliability_score: 0.60
+    description: "Estimated user satisfaction"
+
+  - name: "user_expertise_level"
+    type: "ordinal"
+    values: ["novice", "intermediate", "expert"]
+    volatility: "low"
+    source: "inference"
+    update_cadence: "low_frequency"
+    reliability_score: 0.65
+    description: "Inferred user expertise level"
+
+# =============================================================================
+# AGENT STATE VARIABLES
+# Variables related to agent internal state
+# =============================================================================
+agent_variables:
+
+  - name: "confidence_level"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "high"
+    source: "internal"
+    update_cadence: "real_time"
+    reliability_score: 0.95
+    description: "Agent confidence in current beliefs/actions"
+
+  - name: "risk_exposure"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "high"
+    source: "calculation"
+    update_cadence: "real_time"
+    reliability_score: 0.90
+    description: "Current risk level of pending actions"
+
+  - name: "constraint_violations"
+    type: "discrete"
+    range: [0, 100]
+    volatility: "medium"
+    source: "internal"
+    update_cadence: "real_time"
+    reliability_score: 0.99
+    description: "Count of active constraint violations"
+
+  - name: "memory_utilization"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "low"
+    source: "internal"
+    update_cadence: "medium_frequency"
+    reliability_score: 0.98
+    description: "Memory system utilization"
+
+  - name: "decision_count"
+    type: "discrete"
+    range: [0, 10000]
+    volatility: "high"
+    source: "internal"
+    update_cadence: "real_time"
+    reliability_score: 1.0
+    description: "Number of decisions made in session"
+
+# =============================================================================
+# RESOURCE VARIABLES
+# Variables related to available resources
+# =============================================================================
+resource_variables:
+
+  - name: "resource_availability"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "system"
+    update_cadence: "medium_frequency"
+    reliability_score: 0.95
+    description: "Available computational resources"
+
+  - name: "api_quota_remaining"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "external"
+    update_cadence: "on_api_call"
+    reliability_score: 0.99
+    description: "Remaining API quota as fraction"
+
+  - name: "session_duration"
+    type: "continuous"
+    range: [0, null]
+    unit: "seconds"
+    volatility: "deterministic"
+    source: "internal"
+    update_cadence: "real_time"
+    reliability_score: 1.0
+    description: "Time since session start"
+
+  - name: "response_latency"
+    type: "continuous"
+    range: [0, null]
+    unit: "milliseconds"
+    volatility: "high"
+    source: "measurement"
+    update_cadence: "on_response"
+    reliability_score: 0.99
+    description: "Recent response latency"
+
+# =============================================================================
+# ENVIRONMENT STABILITY VARIABLES
+# Variables related to operating environment
+# =============================================================================
+stability_variables:
+
+  - name: "environment_stability"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "low"
+    source: "inference"
+    update_cadence: "low_frequency"
+    reliability_score: 0.70
+    description: "Stability of operating environment"
+
+  - name: "external_service_health"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "monitoring"
+    update_cadence: "medium_frequency"
+    reliability_score: 0.85
+    description: "Health of external services"
+
+  - name: "error_rate"
+    type: "continuous"
+    range: [0.0, 1.0]
+    volatility: "medium"
+    source: "calculation"
+    update_cadence: "rolling_window"
+    reliability_score: 0.95
+    description: "Recent error rate"
+
+# =============================================================================
+# DERIVED VARIABLES
+# Variables computed from other variables
+# =============================================================================
+derived_variables:
+
+  - name: "action_urgency_score"
+    type: "continuous"
+    range: [0.0, 1.0]
+    derivation: "user_urgency * (1 - task_progress) * (1 + risk_exposure)"
+    dependencies: ["user_urgency", "task_progress", "risk_exposure"]
+    description: "Combined urgency score for action prioritization"
+
+  - name: "safety_margin"
+    type: "continuous"
+    range: [0.0, 1.0]
+    derivation: "(1 - risk_exposure) * (1 - constraint_violations/10)"
+    dependencies: ["risk_exposure", "constraint_violations"]
+    description: "Available safety margin for autonomous action"
+
+  - name: "readiness_score"
+    type: "continuous"
+    range: [0.0, 1.0]
+    derivation: "confidence_level * resource_availability * (1 - error_rate)"
+    dependencies: ["confidence_level", "resource_availability", "error_rate"]
+    description: "Agent readiness to execute actions"
+
+# =============================================================================
+# REGISTRY METADATA
+# =============================================================================
+metadata:
+  total_variables: 22
+  observable_count: 15
+  latent_count: 4
+  derived_count: 3
+  categories:
+    - task_variables
+    - user_variables
+    - agent_variables
+    - resource_variables
+    - stability_variables
+    - derived_variables
+  framework: "CARBON[6] Autonomous Agency"
+  compliance:
+    - "MDP Specification v1.0"
+    - "Environment State Model v1.0"

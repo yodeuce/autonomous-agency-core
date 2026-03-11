@@ -1,0 +1,1 @@
+{"_schema_version": "1.0.0", "_description": "Decision trace log - append-only audit trail", "_fields": ["trace_id", "timestamp", "step", "environment_state", "retrieved_memories", "emv_calculations", "risk_assessment", "selected_action", "action_rationale", "constraint_check", "outcome", "reward"]}

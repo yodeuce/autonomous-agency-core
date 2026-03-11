@@ -1,0 +1,377 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enhanced Memory Protocol Schema",
+  "description": "Canonical structure for all agent memories - prevents flat memory failures",
+  "version": "1.0.0",
+  "classification": "CARBON[6] AUTONOMOUS AGENCY",
+
+  "definitions": {
+    "memory_type": {
+      "type": "string",
+      "enum": ["episodic", "semantic", "strategic", "constraint", "procedural"],
+      "description": "Classification of memory type"
+    },
+
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Confidence in memory accuracy (0-1)"
+    },
+
+    "salience_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Importance/relevance of memory (0-1)"
+    },
+
+    "decay_profile": {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "enum": ["exponential", "power", "linear", "none"],
+          "description": "Decay function type"
+        },
+        "half_life_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Time for memory strength to halve"
+        },
+        "minimum_retention": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Minimum retention level (prevents complete forgetting)"
+        },
+        "is_immutable": {
+          "type": "boolean",
+          "description": "If true, memory never decays"
+        }
+      },
+      "required": ["function"]
+    },
+
+    "source_provenance": {
+      "type": "object",
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": ["observation", "inference", "user_input", "system", "agent", "external_api"],
+          "description": "Origin of the memory"
+        },
+        "source_id": {
+          "type": "string",
+          "description": "Unique identifier of source"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the memory was created"
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": ["unverified", "verified", "contested", "deprecated"],
+          "description": "Verification state of the memory"
+        },
+        "chain_of_custody": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "agent_id": { "type": "string" },
+              "action": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          },
+          "description": "Audit trail of memory modifications"
+        }
+      },
+      "required": ["source_type", "timestamp"]
+    },
+
+    "embedding_vector": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Embedding model used"
+        },
+        "dimensions": {
+          "type": "integer",
+          "description": "Vector dimensionality"
+        },
+        "vector": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "The embedding vector"
+        },
+        "normalized": {
+          "type": "boolean",
+          "description": "Whether vector is normalized"
+        }
+      },
+      "required": ["model", "vector"]
+    }
+  },
+
+  "type": "object",
+  "properties": {
+    "memory_id": {
+      "type": "string",
+      "pattern": "^mem_[a-zA-Z0-9]{16,32}$",
+      "description": "Unique memory identifier"
+    },
+
+    "memory_type": {
+      "$ref": "#/definitions/memory_type"
+    },
+
+    "content": {
+      "type": "object",
+      "properties": {
+        "raw": {
+          "type": "string",
+          "description": "Raw content of the memory"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Compressed summary for quick retrieval"
+        },
+        "structured": {
+          "type": "object",
+          "description": "Structured representation of memory content"
+        },
+        "key_entities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Key entities mentioned in memory"
+        },
+        "key_relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": { "type": "string" },
+              "predicate": { "type": "string" },
+              "object": { "type": "string" }
+            }
+          },
+          "description": "Key relationships in memory"
+        }
+      },
+      "required": ["raw"]
+    },
+
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_accessed": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_modified": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional expiration time"
+        }
+      },
+      "required": ["created"]
+    },
+
+    "scores": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "$ref": "#/definitions/confidence_score"
+        },
+        "salience": {
+          "$ref": "#/definitions/salience_score"
+        },
+        "utility_relevance": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Relevance to current utility/goals"
+        },
+        "risk_impact": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Impact on risk (-1 reduces risk, +1 increases)"
+        },
+        "access_frequency": {
+          "type": "number",
+          "minimum": 0,
+          "description": "How often memory is accessed"
+        },
+        "reinforcement_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Times memory has been reinforced"
+        }
+      },
+      "required": ["confidence", "salience"]
+    },
+
+    "decay": {
+      "$ref": "#/definitions/decay_profile"
+    },
+
+    "provenance": {
+      "$ref": "#/definitions/source_provenance"
+    },
+
+    "embedding": {
+      "$ref": "#/definitions/embedding_vector"
+    },
+
+    "associations": {
+      "type": "object",
+      "properties": {
+        "related_memories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "memory_id": { "type": "string" },
+              "relation_type": { "type": "string" },
+              "strength": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "description": "Links to related memories"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Categorical tags"
+        },
+        "context_keys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Keys for context-based retrieval"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "description": "Agent that owns this memory"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Session where memory was created"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Memory namespace/partition"
+        },
+        "is_compressed": {
+          "type": "boolean",
+          "description": "Whether memory has been compressed"
+        },
+        "compression_ratio": {
+          "type": "number",
+          "description": "Compression ratio if compressed"
+        },
+        "supersedes": {
+          "type": "string",
+          "description": "Memory ID this supersedes (if any)"
+        },
+        "superseded_by": {
+          "type": "string",
+          "description": "Memory ID that supersedes this (if any)"
+        }
+      },
+      "required": ["agent_id"]
+    },
+
+    "access_control": {
+      "type": "object",
+      "properties": {
+        "visibility": {
+          "type": "string",
+          "enum": ["private", "shared", "public"],
+          "description": "Who can access this memory"
+        },
+        "allowed_agents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agents allowed to access (if shared)"
+        },
+        "is_sensitive": {
+          "type": "boolean",
+          "description": "Whether memory contains sensitive information"
+        },
+        "encryption_status": {
+          "type": "string",
+          "enum": ["none", "at_rest", "in_transit", "full"],
+          "description": "Encryption level"
+        }
+      }
+    }
+  },
+
+  "required": [
+    "memory_id",
+    "memory_type",
+    "content",
+    "timestamps",
+    "scores",
+    "decay",
+    "provenance",
+    "metadata"
+  ],
+
+  "examples": [
+    {
+      "memory_id": "mem_a1b2c3d4e5f6g7h8i9j0",
+      "memory_type": "episodic",
+      "content": {
+        "raw": "User requested analysis of Q3 sales data. Identified 15% revenue increase.",
+        "summary": "Q3 sales analysis: 15% revenue increase",
+        "key_entities": ["Q3", "sales data", "revenue"],
+        "key_relations": [
+          { "subject": "revenue", "predicate": "increased_by", "object": "15%" }
+        ]
+      },
+      "timestamps": {
+        "created": "2024-01-15T10:30:00Z",
+        "last_accessed": "2024-01-15T10:30:00Z"
+      },
+      "scores": {
+        "confidence": 0.95,
+        "salience": 0.8,
+        "utility_relevance": 0.7,
+        "risk_impact": 0.0
+      },
+      "decay": {
+        "function": "exponential",
+        "half_life_hours": 168,
+        "minimum_retention": 0.1
+      },
+      "provenance": {
+        "source_type": "observation",
+        "source_id": "task_12345",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "verification_status": "verified"
+      },
+      "metadata": {
+        "agent_id": "carbon-data",
+        "namespace": "client_001/analytics"
+      }
+    }
+  ]
+}

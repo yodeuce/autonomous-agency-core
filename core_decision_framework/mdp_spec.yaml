@@ -1,0 +1,174 @@
+# =============================================================================
+# FILE 1: mdp_spec.yaml
+# PURPOSE: Formal definition of the Markov Decision Process
+# ROLE: Constitutional document of the agent's decision logic
+# =============================================================================
+
+mdp_specification:
+  version: "1.0.0"
+  name: "autonomous_agency_mdp"
+  description: "Core MDP specification for the autonomous AI agency"
+
+  # ---------------------------------------------------------------------------
+  # STATE SPACE DEFINITION
+  # ---------------------------------------------------------------------------
+  state_space:
+    type: "composite"  # composite | discrete | continuous
+    dimensions:
+      - name: "environment_state"
+        type: "continuous"
+        description: "Observable environment variables vector"
+        bounds: null  # Define per-variable in environment_variable_registry.yaml
+
+      - name: "belief_state"
+        type: "continuous"
+        description: "Agent's internal belief about unobserved variables"
+        bounds: [0.0, 1.0]
+
+      - name: "memory_state"
+        type: "discrete"
+        description: "Current active memory context hash"
+        cardinality: null  # Dynamic based on memory store size
+
+      - name: "resource_state"
+        type: "continuous"
+        description: "Available resources (budget, compute, time)"
+        bounds: [0.0, null]
+
+      - name: "risk_state"
+        type: "continuous"
+        description: "Current risk exposure level"
+        bounds: [0.0, 1.0]
+
+    observable: true
+    partially_observable: true
+    observation_model: "belief_state_updater"
+
+  # ---------------------------------------------------------------------------
+  # ACTION SPACE DEFINITION
+  # ---------------------------------------------------------------------------
+  action_space:
+    type: "discrete"  # discrete | continuous | hybrid
+    actions:
+      - name: "gather_information"
+        description: "Collect additional data before deciding"
+        cost: "low"
+        reversible: true
+
+      - name: "execute_task"
+        description: "Execute a primary objective task"
+        cost: "variable"
+        reversible: false
+
+      - name: "delegate"
+        description: "Delegate task to sub-agent or external system"
+        cost: "medium"
+        reversible: false
+
+      - name: "wait"
+        description: "Defer action to next timestep"
+        cost: "opportunity_cost"
+        reversible: true
+
+      - name: "escalate"
+        description: "Escalate to human or higher authority"
+        cost: "low"
+        reversible: true
+
+      - name: "update_model"
+        description: "Trigger internal model update cycle"
+        cost: "compute"
+        reversible: true
+
+      - name: "terminate"
+        description: "End the current episode"
+        cost: "none"
+        reversible: false
+
+    constraints:
+      max_actions_per_step: 1
+      forbidden_actions: []  # Populated by constraint_enforcement_engine
+
+  # ---------------------------------------------------------------------------
+  # TRANSITION ASSUMPTIONS
+  # ---------------------------------------------------------------------------
+  transition_model:
+    type: "learned"  # known | learned | hybrid
+    stochastic: true
+    markov_assumption: true
+    time_homogeneous: false  # Transitions may change over time
+    learning_method: "bayesian_update"
+    confidence_threshold: 0.7  # Minimum confidence to act on transition model
+
+  # ---------------------------------------------------------------------------
+  # REWARD DEFINITION
+  # ---------------------------------------------------------------------------
+  reward_definition:
+    primary_metric: "emv"  # Expected Monetary/Economic Value
+    reward_source: "reward_model.py"
+    components:
+      - name: "task_completion"
+        weight: 0.4
+        description: "Reward for completing objectives"
+
+      - name: "efficiency"
+        weight: 0.2
+        description: "Reward for resource-efficient execution"
+
+      - name: "risk_avoidance"
+        weight: 0.2
+        description: "Penalty avoidance for risky outcomes"
+
+      - name: "information_gain"
+        weight: 0.1
+        description: "Reward for reducing uncertainty"
+
+      - name: "alignment"
+        weight: 0.1
+        description: "Reward for adherence to agent constitution"
+
+    bounds:
+      min: -100.0
+      max: 100.0
+
+  # ---------------------------------------------------------------------------
+  # DISCOUNT FACTOR
+  # ---------------------------------------------------------------------------
+  discount:
+    gamma: 0.95
+    description: "Balance between immediate and future rewards"
+    adaptive: false  # Set to true for dynamic discounting
+
+  # ---------------------------------------------------------------------------
+  # TERMINAL STATES
+  # ---------------------------------------------------------------------------
+  terminal_states:
+    conditions:
+      - name: "objective_complete"
+        description: "All primary objectives achieved"
+        type: "success"
+
+      - name: "resource_exhaustion"
+        description: "No remaining budget, compute, or time"
+        type: "failure"
+
+      - name: "constraint_violation"
+        description: "Immutable constraint breached"
+        type: "abort"
+
+      - name: "human_override"
+        description: "Human operator terminates episode"
+        type: "override"
+
+      - name: "max_steps_reached"
+        description: "Episode length limit exceeded"
+        max_steps: 10000
+        type: "timeout"
+
+  # ---------------------------------------------------------------------------
+  # EPISODE CONFIGURATION
+  # ---------------------------------------------------------------------------
+  episode:
+    max_length: 10000
+    reset_policy: "soft"  # soft (preserve memory) | hard (full reset)
+    checkpoint_interval: 100

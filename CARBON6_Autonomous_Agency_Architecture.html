@@ -1,0 +1,2484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARBON[6] Autonomous AI Agency - Technical Architecture Specification</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm 2.5cm 2cm;
+            @top-center {
+                content: "CARBON[6] AUTONOMOUS AGENCY";
+                font-size: 9pt;
+                color: #666;
+            }
+            @bottom-center {
+                content: counter(page);
+                font-size: 9pt;
+            }
+            @bottom-right {
+                content: "CONFIDENTIAL";
+                font-size: 8pt;
+                color: #999;
+            }
+        }
+
+        @page :first {
+            @top-center { content: none; }
+            @bottom-center { content: none; }
+            @bottom-right { content: none; }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #1a1a1a;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Cover Page */
+        .cover-page {
+            page-break-after: always;
+            text-align: center;
+            padding-top: 15%;
+            height: 100vh;
+        }
+
+        .cover-logo {
+            font-size: 72pt;
+            font-weight: bold;
+            color: #0a2540;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+        }
+
+        .cover-subtitle {
+            font-size: 14pt;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 60px;
+        }
+
+        .cover-title {
+            font-size: 28pt;
+            font-weight: bold;
+            color: #0a2540;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .cover-version {
+            font-size: 14pt;
+            color: #666;
+            margin-top: 40px;
+        }
+
+        .cover-classification {
+            font-size: 11pt;
+            color: #c00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 80px;
+            padding: 10px 30px;
+            border: 2px solid #c00;
+            display: inline-block;
+        }
+
+        .cover-date {
+            font-size: 11pt;
+            color: #666;
+            margin-top: 60px;
+        }
+
+        /* Table of Contents */
+        .toc-page {
+            page-break-after: always;
+        }
+
+        .toc-title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #0a2540;
+            margin-bottom: 40px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #0a2540;
+        }
+
+        .toc-section {
+            margin-bottom: 20px;
+        }
+
+        .toc-section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0a2540;
+            margin-bottom: 8px;
+        }
+
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px dotted #ccc;
+            font-size: 10pt;
+        }
+
+        .toc-item-title {
+            flex: 1;
+        }
+
+        .toc-item-page {
+            color: #666;
+            margin-left: 10px;
+        }
+
+        /* Section Styling */
+        h1 {
+            font-size: 24pt;
+            color: #0a2540;
+            border-bottom: 3px solid #0a2540;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 25px;
+            page-break-after: avoid;
+        }
+
+        h2 {
+            font-size: 16pt;
+            color: #0a2540;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0a2540;
+            padding-left: 15px;
+            page-break-after: avoid;
+        }
+
+        h3 {
+            font-size: 13pt;
+            color: #333;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            page-break-after: avoid;
+        }
+
+        h4 {
+            font-size: 11pt;
+            color: #444;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: #f5f7f9;
+            border: 1px solid #e1e4e8;
+            border-left: 4px solid #0a2540;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 9pt;
+            line-height: 1.4;
+            overflow-x: auto;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+
+        code {
+            background-color: #f5f7f9;
+            padding: 2px 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 9pt;
+            border-radius: 3px;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+
+        th {
+            background-color: #0a2540;
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e1e4e8;
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 12px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+            page-break-inside: avoid;
+        }
+
+        .callout-critical {
+            background-color: #fef2f2;
+            border-left: 4px solid #dc2626;
+        }
+
+        .callout-warning {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .callout-info {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .callout-success {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+        }
+
+        .callout-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        /* File Reference Box */
+        .file-ref {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 10pt;
+        }
+
+        .file-ref-path {
+            font-family: 'Consolas', monospace;
+            color: #0a2540;
+            font-weight: bold;
+        }
+
+        /* Architecture Diagram Placeholder */
+        .diagram-box {
+            background-color: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+
+        /* Component Box */
+        .component-box {
+            border: 1px solid #e1e4e8;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+
+        .component-header {
+            background-color: #0a2540;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+        }
+
+        .component-body {
+            padding: 15px;
+        }
+
+        /* Enumeration */
+        .enum-list {
+            background-color: #f5f7f9;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .enum-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .enum-value {
+            font-family: monospace;
+            background-color: #e1e4e8;
+            padding: 2px 8px;
+            margin-right: 10px;
+            font-size: 9pt;
+        }
+
+        /* Section Break */
+        .section-break {
+            page-break-before: always;
+        }
+
+        /* Executive Summary Box */
+        .exec-summary {
+            background-color: #f0f4f8;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 5px solid #0a2540;
+        }
+
+        .exec-summary h2 {
+            margin-top: 0;
+            border: none;
+            padding-left: 0;
+        }
+
+        /* Footer */
+        .document-footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e4e8;
+            font-size: 9pt;
+            color: #666;
+            text-align: center;
+        }
+
+        /* Specification Table */
+        .spec-table th:first-child {
+            width: 30%;
+        }
+
+        .spec-table td:first-child {
+            font-weight: bold;
+            color: #0a2540;
+        }
+
+        /* Authority Levels */
+        .authority-level {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-left: 4px solid;
+        }
+
+        .authority-level-1 { border-color: #22c55e; }
+        .authority-level-2 { border-color: #3b82f6; }
+        .authority-level-3 { border-color: #f59e0b; }
+        .authority-level-4 { border-color: #ef4444; }
+        .authority-level-5 { border-color: #7c3aed; }
+
+        .authority-number {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-right: 15px;
+            color: #0a2540;
+        }
+    </style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover-page">
+    <div class="cover-logo">CARBON[6]</div>
+    <div class="cover-subtitle">Autonomous AI Agency Framework</div>
+
+    <div class="cover-title">Technical Architecture<br>Specification</div>
+
+    <div class="cover-version">Version 1.0.0</div>
+
+    <div class="cover-classification">INSTITUTIONAL CONFIDENTIAL</div>
+
+    <div class="cover-date">
+        Document Date: February 2026<br>
+        Classification: Enterprise Architecture Documentation
+    </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc-page">
+    <div class="toc-title">Table of Contents</div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">I. EXECUTIVE OVERVIEW</div>
+        <div class="toc-item"><span class="toc-item-title">1.1 Purpose and Scope</span></div>
+        <div class="toc-item"><span class="toc-item-title">1.2 Architectural Philosophy</span></div>
+        <div class="toc-item"><span class="toc-item-title">1.3 System Components Overview</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">II. CORE DECISION SUBSYSTEM</div>
+        <div class="toc-item"><span class="toc-item-title">2.1 MDP Specification (mdp_spec.yaml)</span></div>
+        <div class="toc-item"><span class="toc-item-title">2.2 Policy Definition (policy_definition.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">2.3 Reward Model (reward_model.py)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">III. ENHANCED MEMORY PROTOCOL (EMP)</div>
+        <div class="toc-item"><span class="toc-item-title">3.1 Memory Schema (memory_schema.json)</span></div>
+        <div class="toc-item"><span class="toc-item-title">3.2 Memory Encoder (memory_encoder.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">3.3 Salience Engine (memory_salience_engine.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">3.4 Retrieval Policy (memory_retrieval_policy.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">3.5 Decay and Compression (memory_decay_and_compression.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">3.6 Immutable Registry (immutable_memory_registry.yaml)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">IV. ENVIRONMENT MODELING</div>
+        <div class="toc-item"><span class="toc-item-title">4.1 State Model (environment_state_model.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">4.2 Variable Registry (environment_variable_registry.yaml)</span></div>
+        <div class="toc-item"><span class="toc-item-title">4.3 Observer (environment_observer.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">4.4 Belief State Updater (belief_state_updater.py)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">V. EMV UTILITY FRAMEWORK</div>
+        <div class="toc-item"><span class="toc-item-title">5.1 EMV Calculator (emv_calculator.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">5.2 Utility Functions (utility_function.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">5.3 Risk Model (risk_model.py)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">VI. LEARNING SUBSYSTEM</div>
+        <div class="toc-item"><span class="toc-item-title">6.1 Learning Update Engine (learning_update_engine.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">6.2 Failure Analysis Module (failure_analysis_module.py)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">VII. GOVERNANCE FRAMEWORK</div>
+        <div class="toc-item"><span class="toc-item-title">7.1 Agent Constitution (agent_constitution.md)</span></div>
+        <div class="toc-item"><span class="toc-item-title">7.2 Constraint Enforcement (constraint_enforcement_engine.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">7.3 Decision Trace Log (decision_trace_log.jsonl)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">VIII. ELITE OPTIONAL MODULES</div>
+        <div class="toc-item"><span class="toc-item-title">8.1 Multi-Agent Interface (multi_agent_interface.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">8.2 Scenario Simulator (scenario_simulator.py)</span></div>
+        <div class="toc-item"><span class="toc-item-title">8.3 Red Team Memory Partition (red_team_memory_partition.py)</span></div>
+    </div>
+
+    <div class="toc-section">
+        <div class="toc-section-title">APPENDICES</div>
+        <div class="toc-item"><span class="toc-item-title">A. Complete File Manifest</span></div>
+        <div class="toc-item"><span class="toc-item-title">B. Integration Guidelines</span></div>
+        <div class="toc-item"><span class="toc-item-title">C. Security Considerations</span></div>
+    </div>
+</div>
+
+<!-- SECTION I: EXECUTIVE OVERVIEW -->
+<div class="section-break">
+<h1>I. Executive Overview</h1>
+
+<div class="exec-summary">
+    <h2>Document Purpose</h2>
+    <p>This Technical Architecture Specification provides comprehensive documentation for the CARBON[6] Autonomous AI Agency framework—a production-grade infrastructure for deploying safe, aligned, and effective autonomous AI agents in enterprise environments.</p>
+
+    <p>The framework implements rigorous decision-theoretic principles through 24 interconnected modules spanning decision-making, memory management, environment modeling, value optimization, learning, and governance.</p>
+</div>
+
+<h2>1.1 Purpose and Scope</h2>
+
+<p>The CARBON[6] Autonomous Agency framework addresses the fundamental challenge of deploying AI agents that can:</p>
+
+<ul>
+    <li><strong>Operate Autonomously</strong> — Make decisions and take actions without constant human oversight</li>
+    <li><strong>Maintain Alignment</strong> — Remain aligned with human values and organizational objectives</li>
+    <li><strong>Ensure Safety</strong> — Operate within defined boundaries with deterministic constraint enforcement</li>
+    <li><strong>Optimize Value</strong> — Maximize expected monetary value while managing risk appropriately</li>
+    <li><strong>Learn Continuously</strong> — Improve performance through experience while preserving alignment</li>
+    <li><strong>Provide Transparency</strong> — Maintain complete audit trails for all decisions and actions</li>
+</ul>
+
+<h2>1.2 Architectural Philosophy</h2>
+
+<p>The architecture is grounded in three foundational principles:</p>
+
+<h3>Markov Decision Process (MDP) Foundation</h3>
+<p>All agent behavior is modeled as a formal MDP with clearly defined state spaces, action spaces, transition dynamics, and reward functions. This provides mathematical rigor and enables formal verification of agent properties.</p>
+
+<h3>Expected Monetary Value (EMV) Optimization</h3>
+<p>Decisions are made by computing expected monetary values across all possible outcomes, weighted by probability and transformed through appropriate utility functions. This ensures economically rational decision-making.</p>
+
+<h3>Hierarchical Constraint Architecture</h3>
+<p>A multi-layered constraint system enforces safety at every level—from hard constitutional constraints that can never be violated, to soft operational guidelines that can be overridden with appropriate authorization.</p>
+
+<h2>1.3 System Components Overview</h2>
+
+<table>
+    <tr>
+        <th>Subsystem</th>
+        <th>Components</th>
+        <th>Primary Function</th>
+    </tr>
+    <tr>
+        <td>Core Decision</td>
+        <td>3 modules</td>
+        <td>MDP specification, policy definition, reward modeling</td>
+    </tr>
+    <tr>
+        <td>Memory Protocol</td>
+        <td>6 modules</td>
+        <td>Experience storage, encoding, retrieval, and lifecycle management</td>
+    </tr>
+    <tr>
+        <td>Environment</td>
+        <td>4 modules</td>
+        <td>State modeling, observation, belief updating</td>
+    </tr>
+    <tr>
+        <td>EMV Utility</td>
+        <td>3 modules</td>
+        <td>Value calculation, utility transformation, risk assessment</td>
+    </tr>
+    <tr>
+        <td>Learning</td>
+        <td>2 modules</td>
+        <td>Policy improvement, failure analysis</td>
+    </tr>
+    <tr>
+        <td>Governance</td>
+        <td>3 modules</td>
+        <td>Constitution, constraints, audit logging</td>
+    </tr>
+    <tr>
+        <td>Elite Optional</td>
+        <td>3 modules</td>
+        <td>Multi-agent coordination, simulation, adversarial testing</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- SECTION II: CORE DECISION SUBSYSTEM -->
+<div class="section-break">
+<h1>II. Core Decision Subsystem</h1>
+
+<p>The Core Decision Subsystem provides the mathematical foundation for all agent decision-making. It implements a complete Markov Decision Process specification with policy definitions and reward modeling.</p>
+
+<h2>2.1 MDP Specification</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">core_decision/mdp_spec.yaml</span>
+</div>
+
+<p>The MDP specification defines the formal structure of the agent's decision problem. It serves as the "constitutional document" for agent behavior.</p>
+
+<h3>State Space Definition</h3>
+
+<p>The state space is partitioned into observable and latent components:</p>
+
+<table class="spec-table">
+    <tr>
+        <th>Observable States</th>
+        <th>Description</th>
+        <th>Type</th>
+    </tr>
+    <tr>
+        <td>task_status</td>
+        <td>Current task execution state</td>
+        <td>Categorical</td>
+    </tr>
+    <tr>
+        <td>resource_availability</td>
+        <td>Available computational and external resources</td>
+        <td>Continuous [0,1]</td>
+    </tr>
+    <tr>
+        <td>constraint_status</td>
+        <td>Current constraint satisfaction state</td>
+        <td>Boolean</td>
+    </tr>
+    <tr>
+        <td>time_remaining</td>
+        <td>Time until deadline or timeout</td>
+        <td>Continuous</td>
+    </tr>
+</table>
+
+<table class="spec-table">
+    <tr>
+        <th>Latent States</th>
+        <th>Description</th>
+        <th>Inference Method</th>
+    </tr>
+    <tr>
+        <td>user_intent</td>
+        <td>Inferred user objectives</td>
+        <td>Bayesian inference</td>
+    </tr>
+    <tr>
+        <td>environment_stability</td>
+        <td>Estimated environment volatility</td>
+        <td>Kalman filtering</td>
+    </tr>
+    <tr>
+        <td>task_complexity</td>
+        <td>Estimated difficulty of current task</td>
+        <td>Feature-based estimation</td>
+    </tr>
+</table>
+
+<h3>Action Space</h3>
+
+<p>The action space defines all possible agent actions, organized hierarchically:</p>
+
+<div class="enum-list">
+    <div class="enum-item">
+        <span class="enum-value">OBSERVE</span>
+        <span>Gather information from environment without modifying state</span>
+    </div>
+    <div class="enum-item">
+        <span class="enum-value">ANALYZE</span>
+        <span>Process and analyze available information</span>
+    </div>
+    <div class="enum-item">
+        <span class="enum-value">RECOMMEND</span>
+        <span>Generate recommendation for human approval</span>
+    </div>
+    <div class="enum-item">
+        <span class="enum-value">EXECUTE</span>
+        <span>Take autonomous action within authorized scope</span>
+    </div>
+    <div class="enum-item">
+        <span class="enum-value">ESCALATE</span>
+        <span>Escalate decision to higher authority</span>
+    </div>
+    <div class="enum-item">
+        <span class="enum-value">DEFER</span>
+        <span>Postpone action pending additional information</span>
+    </div>
+</div>
+
+<h3>Transition Model</h3>
+
+<p>The transition model specifies how actions affect state:</p>
+
+<pre>
+P(s' | s, a) = Σ P(s' | s, a, θ) * P(θ | history)
+
+Where:
+  s'    = next state
+  s     = current state
+  a     = action taken
+  θ     = environment parameters (learned from history)
+</pre>
+
+<h3>Discount Factor</h3>
+
+<p>The discount factor γ = 0.95 balances immediate and future rewards, with dynamic adjustment based on urgency:</p>
+
+<pre>
+γ_effective = γ_base * (1 - urgency_factor)
+
+Where urgency_factor ∈ [0, 0.3] based on deadline proximity
+</pre>
+
+<h2>2.2 Policy Definition</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">core_decision/policy_definition.py</span>
+</div>
+
+<p>The policy module defines how agents select actions given states. Multiple policy types are supported:</p>
+
+<h3>Policy Types</h3>
+
+<div class="component-box">
+    <div class="component-header">DeterministicPolicy</div>
+    <div class="component-body">
+        <p>Maps states directly to actions via a lookup table or function. Used when optimal action is unambiguous.</p>
+        <pre>π(s) = a*  where a* = argmax_a Q(s, a)</pre>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">StochasticPolicy</div>
+    <div class="component-body">
+        <p>Maps states to probability distributions over actions. Enables exploration and handles uncertainty.</p>
+        <pre>π(a|s) = exp(Q(s,a)/τ) / Σ_a' exp(Q(s,a')/τ)
+
+Where τ = temperature parameter controlling exploration</pre>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">EpsilonGreedyPolicy</div>
+    <div class="component-body">
+        <p>Balances exploitation and exploration with configurable epsilon decay.</p>
+        <pre>π(a|s) = {
+    1-ε+ε/|A|  if a = argmax Q(s,a)
+    ε/|A|      otherwise
+}
+
+ε_t = max(ε_min, ε_0 * decay^t)</pre>
+    </div>
+</div>
+
+<h3>Policy Manager</h3>
+
+<p>The PolicyManager orchestrates policy selection and enforcement:</p>
+
+<pre>
+class PolicyManager:
+    def select_action(self, state: State) -> Action:
+        # 1. Pre-filter actions through constraint engine
+        valid_actions = self.constraint_engine.filter(state, self.all_actions)
+
+        # 2. Apply active policy to select from valid actions
+        action = self.active_policy.select(state, valid_actions)
+
+        # 3. Log decision for audit
+        self.decision_log.record(state, action, self.active_policy)
+
+        return action
+</pre>
+
+<h2>2.3 Reward Model</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">core_decision/reward_model.py</span>
+</div>
+
+<p>The reward model defines the objective function that guides agent behavior.</p>
+
+<h3>EMV Reward Model</h3>
+
+<p>The primary reward model computes Expected Monetary Value:</p>
+
+<pre>
+R(s, a, s') = Σ_o P(o | s, a, s') * V(o)
+
+Where:
+  o = outcome
+  P(o | s, a, s') = probability of outcome given transition
+  V(o) = monetary value of outcome
+</pre>
+
+<h3>Risk-Adjusted Reward Model</h3>
+
+<p>Incorporates risk preferences through utility transformation:</p>
+
+<pre>
+R_adjusted(s, a) = U(EMV(s, a)) - λ * Risk(s, a)
+
+Where:
+  U() = utility function (e.g., CRRA)
+  λ = risk aversion coefficient
+  Risk() = risk measure (VaR, CVaR, variance)
+</pre>
+
+<h3>Multi-Objective Reward</h3>
+
+<p>Supports multiple objectives with configurable weights:</p>
+
+<pre>
+R_total = Σ_i w_i * R_i(s, a)
+
+Subject to: Σ w_i = 1, w_i ≥ 0
+</pre>
+
+<table>
+    <tr>
+        <th>Objective</th>
+        <th>Weight Range</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Task Completion</td>
+        <td>0.3 - 0.5</td>
+        <td>Primary task success</td>
+    </tr>
+    <tr>
+        <td>Resource Efficiency</td>
+        <td>0.1 - 0.2</td>
+        <td>Minimize resource consumption</td>
+    </tr>
+    <tr>
+        <td>Safety Margin</td>
+        <td>0.2 - 0.3</td>
+        <td>Maintain safety buffer</td>
+    </tr>
+    <tr>
+        <td>User Satisfaction</td>
+        <td>0.1 - 0.2</td>
+        <td>Inferred user preference alignment</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- SECTION III: ENHANCED MEMORY PROTOCOL -->
+<div class="section-break">
+<h1>III. Enhanced Memory Protocol (EMP)</h1>
+
+<p>The Enhanced Memory Protocol provides a comprehensive system for experience storage, retrieval, and lifecycle management. It enables agents to learn from past interactions while maintaining appropriate information governance.</p>
+
+<h2>3.1 Memory Schema</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/memory_schema.json</span>
+</div>
+
+<p>The memory schema defines the canonical structure for all memory entries:</p>
+
+<h3>Memory Types</h3>
+
+<table>
+    <tr>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Retention</th>
+    </tr>
+    <tr>
+        <td><code>episodic</code></td>
+        <td>Specific experiences and events</td>
+        <td>Medium-term, subject to decay</td>
+    </tr>
+    <tr>
+        <td><code>semantic</code></td>
+        <td>General knowledge and facts</td>
+        <td>Long-term, stable</td>
+    </tr>
+    <tr>
+        <td><code>strategic</code></td>
+        <td>Learned strategies and heuristics</td>
+        <td>Long-term, updateable</td>
+    </tr>
+    <tr>
+        <td><code>constraint</code></td>
+        <td>Hard constraints and boundaries</td>
+        <td>Permanent, immutable</td>
+    </tr>
+    <tr>
+        <td><code>procedural</code></td>
+        <td>Learned procedures and workflows</td>
+        <td>Long-term, refinable</td>
+    </tr>
+</table>
+
+<h3>Memory Entry Structure</h3>
+
+<pre>
+{
+  "memory_id": "string (UUID)",
+  "memory_type": "episodic | semantic | strategic | constraint | procedural",
+  "content": {
+    "raw_data": "any",
+    "embedding": "float[]",
+    "summary": "string"
+  },
+  "metadata": {
+    "created_at": "ISO 8601 timestamp",
+    "source": "string",
+    "confidence": "float [0-1]",
+    "salience": "float [0-1]",
+    "access_count": "integer",
+    "last_accessed": "ISO 8601 timestamp"
+  },
+  "decay_profile": {
+    "decay_type": "exponential | power | linear | step",
+    "half_life_hours": "float",
+    "minimum_salience": "float"
+  },
+  "provenance": {
+    "original_source": "string",
+    "derivation_chain": "string[]",
+    "verification_status": "verified | unverified | disputed"
+  }
+}
+</pre>
+
+<h2>3.2 Memory Encoder</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/memory_encoder.py</span>
+</div>
+
+<p>The memory encoder transforms raw experiences into structured memory entries:</p>
+
+<h3>Encoding Pipeline</h3>
+
+<ol>
+    <li><strong>Input Normalization</strong> — Standardize input format and structure</li>
+    <li><strong>Type Classification</strong> — Determine appropriate memory type</li>
+    <li><strong>Content Extraction</strong> — Extract key information from experience</li>
+    <li><strong>Embedding Generation</strong> — Create vector representation</li>
+    <li><strong>Metadata Assignment</strong> — Attach creation metadata and initial salience</li>
+    <li><strong>Decay Profile Selection</strong> — Assign appropriate decay characteristics</li>
+    <li><strong>Validation</strong> — Verify against schema before storage</li>
+</ol>
+
+<h3>Batch Encoding</h3>
+
+<p>The BatchMemoryEncoder provides efficient processing of multiple experiences:</p>
+
+<pre>
+class BatchMemoryEncoder:
+    def encode_batch(
+        self,
+        experiences: List[RawExperience],
+        parallel: bool = True
+    ) -> List[MemoryEntry]:
+
+        if parallel:
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                return list(executor.map(self.encode_single, experiences))
+        else:
+            return [self.encode_single(exp) for exp in experiences]
+</pre>
+
+<h2>3.3 Salience Engine</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/memory_salience_engine.py</span>
+</div>
+
+<p>The salience engine computes and updates memory importance scores:</p>
+
+<h3>Salience Computation</h3>
+
+<pre>
+S(m) = w₁·EMV_impact(m) + w₂·risk_factor(m) + w₃·recency(m) + w₄·frequency(m)
+
+Where:
+  EMV_impact(m) = normalized absolute impact on expected value
+  risk_factor(m) = amplification for risk-related memories
+  recency(m) = exponential decay based on time since creation
+  frequency(m) = log(access_count + 1) / log(max_access + 1)
+</pre>
+
+<h3>Default Weights</h3>
+
+<table>
+    <tr>
+        <th>Factor</th>
+        <th>Weight</th>
+        <th>Rationale</th>
+    </tr>
+    <tr>
+        <td>EMV Impact</td>
+        <td>0.35</td>
+        <td>Primary driver of decision relevance</td>
+    </tr>
+    <tr>
+        <td>Risk Factor</td>
+        <td>0.25</td>
+        <td>Safety-critical memories amplified</td>
+    </tr>
+    <tr>
+        <td>Recency</td>
+        <td>0.25</td>
+        <td>Recent experiences more relevant</td>
+    </tr>
+    <tr>
+        <td>Frequency</td>
+        <td>0.15</td>
+        <td>Frequently accessed = frequently useful</td>
+    </tr>
+</table>
+
+<h2>3.4 Retrieval Policy</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/memory_retrieval_policy.py</span>
+</div>
+
+<p>The retrieval policy determines when and how memories are accessed:</p>
+
+<h3>Retrieval Triggers</h3>
+
+<div class="callout callout-info">
+    <div class="callout-title">Automatic Retrieval Triggers</div>
+    <ul>
+        <li><strong>Decision Uncertainty</strong> — Confidence below threshold triggers relevant memory search</li>
+        <li><strong>Risk Threshold Breach</strong> — High-risk situation retrieves constraint and safety memories</li>
+        <li><strong>Policy Conflict</strong> — Conflicting options trigger strategic memory retrieval</li>
+        <li><strong>Novel State Detection</strong> — Unfamiliar state triggers broad memory search</li>
+    </ul>
+</div>
+
+<h3>Policy Variants</h3>
+
+<table>
+    <tr>
+        <th>Policy</th>
+        <th>Salience Threshold</th>
+        <th>Max Results</th>
+        <th>Use Case</th>
+    </tr>
+    <tr>
+        <td>Standard</td>
+        <td>0.3</td>
+        <td>10</td>
+        <td>Normal operations</td>
+    </tr>
+    <tr>
+        <td>Conservative</td>
+        <td>0.5</td>
+        <td>5</td>
+        <td>High-stakes decisions</td>
+    </tr>
+    <tr>
+        <td>Aggressive</td>
+        <td>0.1</td>
+        <td>25</td>
+        <td>Exploration, learning</td>
+    </tr>
+</table>
+
+<h2>3.5 Decay and Compression</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/memory_decay_and_compression.py</span>
+</div>
+
+<p>Memory lifecycle management through decay and compression:</p>
+
+<h3>Decay Functions</h3>
+
+<pre>
+Exponential:  S(t) = S₀ · e^(-λt)         [Default for episodic]
+Power Law:    S(t) = S₀ · (1 + t)^(-α)    [For semantic memories]
+Linear:       S(t) = max(S_min, S₀ - kt)  [For time-bounded tasks]
+Step:         S(t) = S₀ if t < T else 0   [For deadline-based events]
+</pre>
+
+<h3>Compression Strategy</h3>
+
+<p>When memory capacity approaches limits, compression is triggered:</p>
+
+<ol>
+    <li><strong>Identify Candidates</strong> — Memories with salience below compression threshold</li>
+    <li><strong>Group by Type</strong> — Cluster similar low-salience memories</li>
+    <li><strong>Generate Summary</strong> — Create compressed representation preserving key insights</li>
+    <li><strong>Supersede Originals</strong> — Replace individual memories with summary</li>
+    <li><strong>Update References</strong> — Maintain provenance chain to originals</li>
+</ol>
+
+<h2>3.6 Immutable Memory Registry</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">memory_protocol/immutable_memory_registry.yaml</span>
+</div>
+
+<div class="callout callout-critical">
+    <div class="callout-title">IMMUTABLE CONSTRAINTS</div>
+    <p>The following memory categories cannot be modified, overridden, or deleted. They persist indefinitely and supersede all other memories in conflict resolution.</p>
+</div>
+
+<h3>Categories</h3>
+
+<table>
+    <tr>
+        <th>Category</th>
+        <th>Example Entries</th>
+        <th>Purpose</th>
+    </tr>
+    <tr>
+        <td>Hard Constraints</td>
+        <td>No physical harm, no privacy violations</td>
+        <td>Absolute behavioral boundaries</td>
+    </tr>
+    <tr>
+        <td>Safety Rules</td>
+        <td>Fail-safe defaults, escalation requirements</td>
+        <td>Operational safety</td>
+    </tr>
+    <tr>
+        <td>Governance Mandates</td>
+        <td>Audit requirements, authorization levels</td>
+        <td>Compliance and oversight</td>
+    </tr>
+    <tr>
+        <td>Ethical Boundaries</td>
+        <td>Truthfulness, beneficence, autonomy respect</td>
+        <td>Value alignment</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- SECTION IV: ENVIRONMENT MODELING -->
+<div class="section-break">
+<h1>IV. Environment Modeling</h1>
+
+<p>The Environment subsystem provides the agent's interface with the external world, managing observation, state estimation, and belief updates under uncertainty.</p>
+
+<h2>4.1 Environment State Model</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">environment/environment_state_model.py</span>
+</div>
+
+<h3>State Variable Types</h3>
+
+<table>
+    <tr>
+        <th>Type</th>
+        <th>Values</th>
+        <th>Example</th>
+    </tr>
+    <tr>
+        <td>Continuous</td>
+        <td>Real numbers in range</td>
+        <td>confidence_level ∈ [0, 1]</td>
+    </tr>
+    <tr>
+        <td>Discrete</td>
+        <td>Finite set</td>
+        <td>task_status ∈ {pending, active, complete}</td>
+    </tr>
+    <tr>
+        <td>Binary</td>
+        <td>{true, false}</td>
+        <td>constraint_satisfied</td>
+    </tr>
+    <tr>
+        <td>Categorical</td>
+        <td>Unordered set</td>
+        <td>user_preference ∈ {speed, quality, cost}</td>
+    </tr>
+</table>
+
+<h3>Partial Observability</h3>
+
+<p>The PartiallyObservableStateModel maintains belief distributions over hidden states:</p>
+
+<pre>
+class PartiallyObservableStateModel:
+    def __init__(self):
+        self.belief_state: Dict[str, Distribution] = {}
+
+    def update_belief(self, observation: Observation) -> None:
+        for var in self.hidden_variables:
+            likelihood = self.observation_model.likelihood(observation, var)
+            self.belief_state[var] = self._bayesian_update(
+                prior=self.belief_state[var],
+                likelihood=likelihood
+            )
+</pre>
+
+<h2>4.2 Variable Registry</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">environment/environment_variable_registry.yaml</span>
+</div>
+
+<p>Complete enumeration of environment variables:</p>
+
+<h3>Task Variables</h3>
+<ul>
+    <li><code>task_id</code> — Unique task identifier</li>
+    <li><code>task_type</code> — Classification of task</li>
+    <li><code>task_priority</code> — Urgency level [1-5]</li>
+    <li><code>task_deadline</code> — Completion deadline (optional)</li>
+    <li><code>task_progress</code> — Completion percentage [0-100]</li>
+</ul>
+
+<h3>Agent Variables</h3>
+<ul>
+    <li><code>confidence_level</code> — Current decision confidence [0-1]</li>
+    <li><code>risk_exposure</code> — Aggregate risk level [0-1]</li>
+    <li><code>resource_utilization</code> — Current resource usage [0-1]</li>
+    <li><code>constraint_violations</code> — Count of active violations</li>
+</ul>
+
+<h3>Derived Variables</h3>
+<ul>
+    <li><code>urgency_score</code> — Computed from deadline proximity</li>
+    <li><code>complexity_estimate</code> — Inferred task difficulty</li>
+    <li><code>success_probability</code> — Estimated likelihood of success</li>
+</ul>
+
+<h2>4.3 Environment Observer</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">environment/environment_observer.py</span>
+</div>
+
+<h3>Observation Sources</h3>
+
+<table>
+    <tr>
+        <th>Source</th>
+        <th>Reliability</th>
+        <th>Latency</th>
+    </tr>
+    <tr>
+        <td>Internal State</td>
+        <td>1.0</td>
+        <td>Immediate</td>
+    </tr>
+    <tr>
+        <td>User Input</td>
+        <td>0.9</td>
+        <td>Variable</td>
+    </tr>
+    <tr>
+        <td>API Response</td>
+        <td>0.95</td>
+        <td>Network-dependent</td>
+    </tr>
+    <tr>
+        <td>Sensor Data</td>
+        <td>0.8</td>
+        <td>Polling interval</td>
+    </tr>
+    <tr>
+        <td>Inference</td>
+        <td>Variable</td>
+        <td>Computation time</td>
+    </tr>
+</table>
+
+<h3>Observation Processing</h3>
+
+<pre>
+def process_observation(self, raw_obs: RawObservation) -> ProcessedObservation:
+    # 1. Validate source
+    if not self.validate_source(raw_obs.source):
+        raise UntrustedSourceError(raw_obs.source)
+
+    # 2. Normalize values
+    normalized = self.normalize(raw_obs.values)
+
+    # 3. Handle missing data
+    imputed = self.impute_missing(normalized)
+
+    # 4. Apply reliability weighting
+    weighted = self.apply_reliability(imputed, raw_obs.source)
+
+    # 5. Timestamp and return
+    return ProcessedObservation(
+        values=weighted,
+        timestamp=datetime.now(),
+        source=raw_obs.source,
+        confidence=self.compute_confidence(weighted)
+    )
+</pre>
+
+<h2>4.4 Belief State Updater</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">environment/belief_state_updater.py</span>
+</div>
+
+<h3>Update Methods</h3>
+
+<div class="component-box">
+    <div class="component-header">Bayesian Belief Updater</div>
+    <div class="component-body">
+        <pre>P(θ|D) ∝ P(D|θ) · P(θ)
+
+posterior = likelihood × prior / evidence</pre>
+        <p>Used for: Discrete states, categorical variables, hypothesis testing</p>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Kalman Belief Updater</div>
+    <div class="component-body">
+        <pre>x̂ₖ = x̂ₖ₋₁ + Kₖ(zₖ - Hx̂ₖ₋₁)
+Kₖ = Pₖ₋₁Hᵀ(HPₖ₋₁Hᵀ + R)⁻¹</pre>
+        <p>Used for: Continuous states, linear dynamics, real-valued estimates</p>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Exponential Moving Average</div>
+    <div class="component-body">
+        <pre>x̂ₜ = α · xₜ + (1-α) · x̂ₜ₋₁</pre>
+        <p>Used for: Trend tracking, simple smoothing, high-frequency updates</p>
+    </div>
+</div>
+
+</div>
+
+<!-- SECTION V: EMV UTILITY FRAMEWORK -->
+<div class="section-break">
+<h1>V. EMV Utility Framework</h1>
+
+<p>The EMV Utility Framework provides the economic reasoning capability for the agent, enabling value-based decision-making with appropriate risk management.</p>
+
+<h2>5.1 EMV Calculator</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">emv_utility/emv_calculator.py</span>
+</div>
+
+<h3>Core Calculation</h3>
+
+<pre>
+EMV(a) = Σᵢ P(oᵢ | a) × V(oᵢ)
+
+Where:
+  a = action under consideration
+  oᵢ = possible outcome i
+  P(oᵢ | a) = probability of outcome given action
+  V(oᵢ) = monetary value of outcome
+</pre>
+
+<h3>Outcome Enumeration</h3>
+
+<p>The OutcomeEnumerator generates the probability-weighted outcome set:</p>
+
+<pre>
+class OutcomeEnumerator:
+    def enumerate(
+        self,
+        state: State,
+        action: Action
+    ) -> List[WeightedOutcome]:
+
+        # Generate base outcomes from transition model
+        base_outcomes = self.transition_model.predict_outcomes(state, action)
+
+        # Expand with uncertainty
+        expanded = self.expand_uncertainty(base_outcomes)
+
+        # Normalize probabilities
+        total_prob = sum(o.probability for o in expanded)
+        for outcome in expanded:
+            outcome.probability /= total_prob
+
+        return expanded
+</pre>
+
+<h3>Action Comparison</h3>
+
+<pre>
+def compare_actions(
+    self,
+    state: State,
+    actions: List[Action]
+) -> ActionRanking:
+
+    emv_scores = {}
+    for action in actions:
+        emv_scores[action] = self.calculate_emv(state, action)
+
+    ranked = sorted(
+        emv_scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return ActionRanking(
+        best_action=ranked[0][0],
+        scores=emv_scores,
+        margin=ranked[0][1] - ranked[1][1] if len(ranked) > 1 else float('inf')
+    )
+</pre>
+
+<h2>5.2 Utility Functions</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">emv_utility/utility_function.py</span>
+</div>
+
+<p>Utility functions transform monetary values to account for risk preferences:</p>
+
+<h3>Available Functions</h3>
+
+<table>
+    <tr>
+        <th>Function</th>
+        <th>Formula</th>
+        <th>Risk Attitude</th>
+    </tr>
+    <tr>
+        <td>Linear</td>
+        <td>U(x) = x</td>
+        <td>Risk Neutral</td>
+    </tr>
+    <tr>
+        <td>Logarithmic</td>
+        <td>U(x) = ln(x + 1)</td>
+        <td>Risk Averse (decreasing)</td>
+    </tr>
+    <tr>
+        <td>Exponential</td>
+        <td>U(x) = 1 - e^(-αx)</td>
+        <td>Risk Averse (constant)</td>
+    </tr>
+    <tr>
+        <td>Power (CRRA)</td>
+        <td>U(x) = x^(1-ρ) / (1-ρ)</td>
+        <td>Risk Averse (configurable)</td>
+    </tr>
+    <tr>
+        <td>Prospect Theory</td>
+        <td>U(x) = x^α if x≥0, -λ(-x)^β if x<0</td>
+        <td>Loss Averse</td>
+    </tr>
+</table>
+
+<h3>Adaptive Utility</h3>
+
+<p>The AdaptiveUtilityFunction adjusts risk aversion based on context:</p>
+
+<pre>
+class AdaptiveUtilityFunction:
+    def compute(self, value: float, context: Context) -> float:
+        # Increase risk aversion when:
+        # - Stakes are high
+        # - Resources are low
+        # - Time pressure is high
+
+        risk_aversion = self.base_risk_aversion
+
+        if context.stakes > self.high_stakes_threshold:
+            risk_aversion *= 1.5
+
+        if context.resource_availability < 0.3:
+            risk_aversion *= 1.3
+
+        return self.power_utility(value, risk_aversion)
+</pre>
+
+<h2>5.3 Risk Model</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">emv_utility/risk_model.py</span>
+</div>
+
+<h3>Risk Measures</h3>
+
+<div class="component-box">
+    <div class="component-header">Value at Risk (VaR)</div>
+    <div class="component-body">
+        <p>The maximum loss not exceeded with a given confidence level.</p>
+        <pre>VaR_α = -inf{x : P(X ≤ x) ≥ α}</pre>
+        <p>Example: VaR₉₅ = $10,000 means 95% confident loss won't exceed $10,000</p>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Conditional Value at Risk (CVaR)</div>
+    <div class="component-body">
+        <p>Expected loss in the worst α% of cases.</p>
+        <pre>CVaR_α = E[X | X ≤ VaR_α]</pre>
+        <p>More conservative than VaR—captures tail risk.</p>
+    </div>
+</div>
+
+<h3>Risk Categories</h3>
+
+<table>
+    <tr>
+        <th>Category</th>
+        <th>Examples</th>
+        <th>Mitigation Focus</th>
+    </tr>
+    <tr>
+        <td>Operational</td>
+        <td>System failure, timeout, resource exhaustion</td>
+        <td>Redundancy, monitoring</td>
+    </tr>
+    <tr>
+        <td>Financial</td>
+        <td>Cost overrun, opportunity cost, market volatility</td>
+        <td>Budgets, hedging</td>
+    </tr>
+    <tr>
+        <td>Compliance</td>
+        <td>Policy violation, regulatory breach</td>
+        <td>Constraints, auditing</td>
+    </tr>
+    <tr>
+        <td>Reputational</td>
+        <td>User dissatisfaction, trust erosion</td>
+        <td>Quality controls, escalation</td>
+    </tr>
+    <tr>
+        <td>Strategic</td>
+        <td>Goal misalignment, suboptimal outcomes</td>
+        <td>Alignment checks, oversight</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- SECTION VI: LEARNING SUBSYSTEM -->
+<div class="section-break">
+<h1>VI. Learning Subsystem</h1>
+
+<p>The Learning subsystem enables the agent to improve performance through experience while maintaining alignment and safety guarantees.</p>
+
+<h2>6.1 Learning Update Engine</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">learning/learning_update_engine.py</span>
+</div>
+
+<h3>Learning Algorithms</h3>
+
+<div class="component-box">
+    <div class="component-header">Temporal Difference Learning</div>
+    <div class="component-body">
+        <pre>Q(s,a) ← Q(s,a) + α[r + γ·max_a' Q(s',a') - Q(s,a)]
+
+Where:
+  α = learning rate
+  γ = discount factor
+  r = immediate reward
+  s' = next state</pre>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Policy Gradient</div>
+    <div class="component-body">
+        <pre>∇J(θ) = E[∇log π_θ(a|s) · A(s,a)]
+
+Where:
+  θ = policy parameters
+  π_θ = parameterized policy
+  A(s,a) = advantage function</pre>
+    </div>
+</div>
+
+<h3>Salience-Based Learning</h3>
+
+<p>Learning rates are modulated by experience salience:</p>
+
+<pre>
+α_effective = α_base × salience(experience)
+
+# High-salience experiences (critical outcomes, errors)
+# have stronger learning effect
+</pre>
+
+<h3>Experience Replay</h3>
+
+<pre>
+class ExperienceReplay:
+    def __init__(self, capacity: int = 10000):
+        self.buffer = deque(maxlen=capacity)
+
+    def sample_batch(self, batch_size: int) -> List[Experience]:
+        # Priority sampling based on TD error
+        priorities = [self.compute_priority(exp) for exp in self.buffer]
+        probs = np.array(priorities) / sum(priorities)
+
+        indices = np.random.choice(
+            len(self.buffer),
+            size=batch_size,
+            p=probs
+        )
+
+        return [self.buffer[i] for i in indices]
+</pre>
+
+<h2>6.2 Failure Analysis Module</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">learning/failure_analysis_module.py</span>
+</div>
+
+<p>Systematic analysis of failures to prevent recurrence:</p>
+
+<h3>Root Cause Analysis</h3>
+
+<pre>
+class FailureAnalysisModule:
+    def analyze_failure(
+        self,
+        failure_event: FailureEvent
+    ) -> FailureAnalysis:
+
+        # 1. Extract decision trace
+        trace = self.get_decision_trace(failure_event.session_id)
+
+        # 2. Identify contributing factors
+        factors = self.identify_factors(trace, failure_event)
+
+        # 3. Determine root cause
+        root_cause = self.find_root_cause(factors)
+
+        # 4. Generate recommendations
+        recommendations = self.generate_recommendations(root_cause)
+
+        # 5. Update policy penalties
+        self.apply_policy_penalties(root_cause, failure_event.severity)
+
+        return FailureAnalysis(
+            failure=failure_event,
+            factors=factors,
+            root_cause=root_cause,
+            recommendations=recommendations
+        )
+</pre>
+
+<h3>Failure Categories</h3>
+
+<table>
+    <tr>
+        <th>Category</th>
+        <th>Typical Causes</th>
+        <th>Policy Response</th>
+    </tr>
+    <tr>
+        <td>Information Failure</td>
+        <td>Missing data, stale information</td>
+        <td>Increase observation before action</td>
+    </tr>
+    <tr>
+        <td>Estimation Error</td>
+        <td>Probability miscalibration</td>
+        <td>Widen confidence intervals</td>
+    </tr>
+    <tr>
+        <td>Execution Failure</td>
+        <td>Action failed to achieve intended effect</td>
+        <td>Add verification steps</td>
+    </tr>
+    <tr>
+        <td>Constraint Violation</td>
+        <td>Boundary exceeded</td>
+        <td>Strengthen constraint checking</td>
+    </tr>
+    <tr>
+        <td>Goal Misalignment</td>
+        <td>Achieved stated goal but not intent</td>
+        <td>Improve intent modeling</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- SECTION VII: GOVERNANCE FRAMEWORK -->
+<div class="section-break">
+<h1>VII. Governance Framework</h1>
+
+<p>The Governance Framework ensures safe, aligned, and auditable agent operation through constitutional constraints, enforcement mechanisms, and comprehensive logging.</p>
+
+<h2>7.1 Agent Constitution</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">governance/agent_constitution.md</span>
+</div>
+
+<p>The Agent Constitution establishes the foundational principles and boundaries for all agent behavior.</p>
+
+<h3>Mission Hierarchy</h3>
+
+<ol>
+    <li><strong>Safety</strong> — Prevent harm to humans, systems, and data</li>
+    <li><strong>Compliance</strong> — Adhere to all applicable laws and policies</li>
+    <li><strong>Effectiveness</strong> — Achieve designated objectives efficiently</li>
+    <li><strong>Transparency</strong> — Maintain auditability and explainability</li>
+    <li><strong>Improvement</strong> — Continuously learn and enhance capabilities</li>
+</ol>
+
+<h3>Absolute Prohibitions</h3>
+
+<div class="callout callout-critical">
+    <div class="callout-title">HARD CONSTRAINTS - Cannot Be Overridden</div>
+    <ol>
+        <li>Cause or facilitate physical harm to humans</li>
+        <li>Expose personal identifiable information without consent</li>
+        <li>Misrepresent AI nature when directly asked</li>
+        <li>Bypass or disable safety mechanisms</li>
+        <li>Assist in creating weapons, malware, or harmful substances</li>
+        <li>Take actions beyond defined authorization levels</li>
+        <li>Permanently delete data without explicit confirmation</li>
+        <li>Operate in ways that evade logging or monitoring</li>
+    </ol>
+</div>
+
+<h3>Authority Levels</h3>
+
+<div class="authority-level authority-level-1">
+    <span class="authority-number">1</span>
+    <div>
+        <strong>Observation</strong><br>
+        Read data, gather information — no state modification
+    </div>
+</div>
+
+<div class="authority-level authority-level-2">
+    <span class="authority-number">2</span>
+    <div>
+        <strong>Analysis</strong><br>
+        Process, analyze, generate insights from available data
+    </div>
+</div>
+
+<div class="authority-level authority-level-3">
+    <span class="authority-number">3</span>
+    <div>
+        <strong>Recommendation</strong><br>
+        Suggest actions for human approval
+    </div>
+</div>
+
+<div class="authority-level authority-level-4">
+    <span class="authority-number">4</span>
+    <div>
+        <strong>Autonomous</strong><br>
+        Execute pre-approved action types independently
+    </div>
+</div>
+
+<div class="authority-level authority-level-5">
+    <span class="authority-number">5</span>
+    <div>
+        <strong>Supervisory</strong><br>
+        Oversee other agents (with human oversight)
+    </div>
+</div>
+
+<h2>7.2 Constraint Enforcement Engine</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">governance/constraint_enforcement_engine.py</span>
+</div>
+
+<h3>Constraint Types</h3>
+
+<table>
+    <tr>
+        <th>Type</th>
+        <th>Override Possible</th>
+        <th>Violation Response</th>
+    </tr>
+    <tr>
+        <td>HARD</td>
+        <td>Never</td>
+        <td>Block action, log, alert</td>
+    </tr>
+    <tr>
+        <td>SOFT</td>
+        <td>With authorization</td>
+        <td>Warn, request confirmation</td>
+    </tr>
+    <tr>
+        <td>ADVISORY</td>
+        <td>Always</td>
+        <td>Log warning only</td>
+    </tr>
+</table>
+
+<h3>Enforcement Flow</h3>
+
+<pre>
+def check_constraints(self, state: State, action: Action) -> EnforcementResult:
+    violations = []
+
+    # Check constraints in priority order
+    for constraint in sorted(self.constraints, key=lambda c: c.priority, reverse=True):
+        if constraint.is_violated(state, action):
+            violations.append(self.create_violation(constraint, state, action))
+
+            if constraint.type == ConstraintType.HARD:
+                # Hard constraint - block immediately
+                return EnforcementResult(
+                    allowed=False,
+                    violations=violations,
+                    action=EnforcementAction.BLOCK
+                )
+
+    # All hard constraints passed
+    return EnforcementResult(
+        allowed=True,
+        violations=violations,
+        warnings=[v.message for v in violations]
+    )
+</pre>
+
+<h3>Escalation Protocol</h3>
+
+<table>
+    <tr>
+        <th>Level</th>
+        <th>Trigger</th>
+        <th>Response</th>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>Advisory violation</td>
+        <td>Log and continue</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>Soft constraint violation</td>
+        <td>Warn and request confirmation</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>Hard constraint violation</td>
+        <td>Block action, escalate to supervisor</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>Critical safety violation</td>
+        <td>Immediate shutdown, alert all principals</td>
+    </tr>
+</table>
+
+<h2>7.3 Decision Trace Log</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">governance/decision_trace_log.jsonl</span>
+</div>
+
+<p>Complete audit trail for all agent decisions in JSON Lines format:</p>
+
+<h3>Log Entry Schema</h3>
+
+<pre>
+{
+  "trace_id": "uuid",
+  "timestamp": "ISO 8601",
+  "session_id": "string",
+  "agent_id": "string",
+  "decision": {
+    "state_snapshot": {...},
+    "action_considered": [...],
+    "action_selected": "string",
+    "emv_scores": {...},
+    "policy_used": "string"
+  },
+  "constraints": {
+    "checked": [...],
+    "violations": [...],
+    "overrides_applied": [...]
+  },
+  "outcome": {
+    "result": "success | failure | partial",
+    "actual_value": number,
+    "expected_value": number,
+    "variance_explanation": "string"
+  }
+}
+</pre>
+
+<h3>Retention Policy</h3>
+
+<ul>
+    <li><strong>Real-time logs</strong> — 30 days hot storage</li>
+    <li><strong>Aggregated logs</strong> — 1 year warm storage</li>
+    <li><strong>Critical events</strong> — Indefinite cold storage</li>
+    <li><strong>Constraint violations</strong> — 7 years (compliance)</li>
+</ul>
+
+</div>
+
+<!-- SECTION VIII: ELITE OPTIONAL MODULES -->
+<div class="section-break">
+<h1>VIII. Elite Optional Modules</h1>
+
+<p>Advanced capabilities for enterprise deployments requiring multi-agent coordination, scenario simulation, and adversarial testing.</p>
+
+<h2>8.1 Multi-Agent Interface</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">elite_optional/multi_agent_interface.py</span>
+</div>
+
+<h3>Coordination Protocols</h3>
+
+<table>
+    <tr>
+        <th>Protocol</th>
+        <th>Use Case</th>
+        <th>Characteristics</th>
+    </tr>
+    <tr>
+        <td>Hierarchical</td>
+        <td>Clear authority structure</td>
+        <td>Coordinator assigns tasks</td>
+    </tr>
+    <tr>
+        <td>Democratic</td>
+        <td>Peer decision-making</td>
+        <td>Voting on proposals</td>
+    </tr>
+    <tr>
+        <td>Auction</td>
+        <td>Resource allocation</td>
+        <td>Agents bid for tasks</td>
+    </tr>
+    <tr>
+        <td>Contract Net</td>
+        <td>Flexible task assignment</td>
+        <td>Announce, bid, award cycle</td>
+    </tr>
+    <tr>
+        <td>Blackboard</td>
+        <td>Collaborative problem-solving</td>
+        <td>Shared workspace</td>
+    </tr>
+</table>
+
+<h3>Shared Memory</h3>
+
+<pre>
+class SharedMemory:
+    async def put(
+        self,
+        key: str,
+        value: Any,
+        owner_id: str,
+        ttl_seconds: Optional[int] = None,
+        access_list: Optional[Set[str]] = None
+    ) -> bool:
+        """
+        Store value in shared memory with:
+        - Owner tracking
+        - Optional TTL
+        - Optional access control list
+        """
+
+    async def get(
+        self,
+        key: str,
+        requester_id: str
+    ) -> Optional[Any]:
+        """
+        Retrieve value if:
+        - Key exists
+        - Not expired
+        - Requester has access
+        """
+</pre>
+
+<h3>Negotiation Protocol</h3>
+
+<pre>
+async def initiate_negotiation(
+    self,
+    initiator_id: str,
+    participants: Set[str],
+    topic: str,
+    initial_offer: Dict,
+    deadline_seconds: int = 60
+) -> str:
+    """
+    Start multi-party negotiation:
+    1. Create negotiation state
+    2. Notify all participants
+    3. Accept offers until deadline
+    4. Determine outcome
+    """
+</pre>
+
+<h2>8.2 Scenario Simulator</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">elite_optional/scenario_simulator.py</span>
+</div>
+
+<h3>Simulation Types</h3>
+
+<div class="component-box">
+    <div class="component-header">Monte Carlo Simulation</div>
+    <div class="component-body">
+        <p>Samples from variable distributions to estimate outcome distributions.</p>
+        <ul>
+            <li>Default: 1,000 samples</li>
+            <li>Convergence detection</li>
+            <li>Percentile reporting (5th, 25th, 50th, 75th, 95th)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Scenario Analysis</div>
+    <div class="component-body">
+        <p>Evaluates specific scenarios:</p>
+        <ul>
+            <li>Baseline (expected values)</li>
+            <li>Optimistic (90th percentile)</li>
+            <li>Pessimistic (10th percentile)</li>
+            <li>Stress tests (extreme values)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="component-box">
+    <div class="component-header">Counterfactual Analysis</div>
+    <div class="component-body">
+        <p>Answers: "What would have happened if we had done X instead?"</p>
+        <pre>Regret = max(0, E[V(alt_action)] - V(actual_action))</pre>
+    </div>
+</div>
+
+<h3>Foresight Planning</h3>
+
+<p>Multi-step lookahead over planning horizon:</p>
+
+<pre>
+def run_foresight(
+    self,
+    variables: List[ScenarioVariable],
+    actions: List[str],
+    horizon_steps: int = 5
+) -> Dict[str, List[SimulationResult]]:
+    """
+    For each action, simulate outcomes over horizon,
+    evolving variables at each step.
+    """
+</pre>
+
+<h2>8.3 Red Team Memory Partition</h2>
+
+<div class="file-ref">
+    <span class="file-ref-path">elite_optional/red_team_memory_partition.py</span>
+</div>
+
+<h3>Attack Types</h3>
+
+<table>
+    <tr>
+        <th>Attack</th>
+        <th>Description</th>
+        <th>Severity</th>
+    </tr>
+    <tr>
+        <td>Prompt Injection</td>
+        <td>Attempt to override system instructions</td>
+        <td>High</td>
+    </tr>
+    <tr>
+        <td>Memory Poisoning</td>
+        <td>Inject false memories</td>
+        <td>High</td>
+    </tr>
+    <tr>
+        <td>Constraint Bypass</td>
+        <td>Gradual escalation past boundaries</td>
+        <td>Critical</td>
+    </tr>
+    <tr>
+        <td>Reward Hacking</td>
+        <td>Game metrics without achieving goals</td>
+        <td>Medium</td>
+    </tr>
+    <tr>
+        <td>Information Leak</td>
+        <td>Extract sensitive system information</td>
+        <td>High</td>
+    </tr>
+</table>
+
+<h3>Isolation Levels</h3>
+
+<table>
+    <tr>
+        <th>Level</th>
+        <th>Read Main Memory</th>
+        <th>Write Main Memory</th>
+        <th>Use Case</th>
+    </tr>
+    <tr>
+        <td>NONE</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>Not recommended</td>
+    </tr>
+    <tr>
+        <td>SOFT</td>
+        <td>✓</td>
+        <td>✗</td>
+        <td>Read-only testing</td>
+    </tr>
+    <tr>
+        <td>HARD</td>
+        <td>✗</td>
+        <td>✗</td>
+        <td>Full isolation</td>
+    </tr>
+    <tr>
+        <td>SNAPSHOT</td>
+        <td>Copy</td>
+        <td>To copy</td>
+        <td>Safe experimentation</td>
+    </tr>
+</table>
+
+<h3>Test Execution</h3>
+
+<pre>
+def run_test_suite(
+    self,
+    agent_handler: Callable,
+    attack_types: Optional[List[AttackType]] = None
+) -> Dict[str, Any]:
+    """
+    Execute adversarial test suite:
+    - Generate scenarios for each attack type
+    - Run attacks in isolation
+    - Record defenses triggered
+    - Generate vulnerability report
+    - Calculate security score
+    """
+
+    return {
+        "passed": count,
+        "failed": count,
+        "pass_rate": float,
+        "vulnerabilities": List[VulnerabilityReport],
+        "security_score": float  # 0-100
+    }
+</pre>
+
+</div>
+
+<!-- APPENDIX A -->
+<div class="section-break">
+<h1>Appendix A: Complete File Manifest</h1>
+
+<table>
+    <tr>
+        <th>#</th>
+        <th>File Path</th>
+        <th>Type</th>
+        <th>Purpose</th>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>core_decision/mdp_spec.yaml</td>
+        <td>YAML</td>
+        <td>MDP constitutional specification</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>core_decision/policy_definition.py</td>
+        <td>Python</td>
+        <td>Policy types and manager</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>core_decision/reward_model.py</td>
+        <td>Python</td>
+        <td>Reward computation models</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>memory_protocol/memory_schema.json</td>
+        <td>JSON</td>
+        <td>Memory entry schema</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>memory_protocol/memory_encoder.py</td>
+        <td>Python</td>
+        <td>Experience to memory transformation</td>
+    </tr>
+    <tr>
+        <td>6</td>
+        <td>memory_protocol/memory_salience_engine.py</td>
+        <td>Python</td>
+        <td>Importance scoring</td>
+    </tr>
+    <tr>
+        <td>7</td>
+        <td>memory_protocol/memory_retrieval_policy.py</td>
+        <td>Python</td>
+        <td>When and how to retrieve</td>
+    </tr>
+    <tr>
+        <td>8</td>
+        <td>memory_protocol/memory_decay_and_compression.py</td>
+        <td>Python</td>
+        <td>Lifecycle management</td>
+    </tr>
+    <tr>
+        <td>9</td>
+        <td>memory_protocol/immutable_memory_registry.yaml</td>
+        <td>YAML</td>
+        <td>Permanent constraints</td>
+    </tr>
+    <tr>
+        <td>10</td>
+        <td>environment/environment_state_model.py</td>
+        <td>Python</td>
+        <td>State representation</td>
+    </tr>
+    <tr>
+        <td>11</td>
+        <td>environment/environment_variable_registry.yaml</td>
+        <td>YAML</td>
+        <td>Variable definitions</td>
+    </tr>
+    <tr>
+        <td>12</td>
+        <td>environment/environment_observer.py</td>
+        <td>Python</td>
+        <td>Observation processing</td>
+    </tr>
+    <tr>
+        <td>13</td>
+        <td>environment/belief_state_updater.py</td>
+        <td>Python</td>
+        <td>Belief maintenance</td>
+    </tr>
+    <tr>
+        <td>14</td>
+        <td>emv_utility/emv_calculator.py</td>
+        <td>Python</td>
+        <td>Expected value computation</td>
+    </tr>
+    <tr>
+        <td>15</td>
+        <td>emv_utility/utility_function.py</td>
+        <td>Python</td>
+        <td>Utility transformations</td>
+    </tr>
+    <tr>
+        <td>16</td>
+        <td>emv_utility/risk_model.py</td>
+        <td>Python</td>
+        <td>Risk assessment</td>
+    </tr>
+    <tr>
+        <td>17</td>
+        <td>learning/learning_update_engine.py</td>
+        <td>Python</td>
+        <td>Policy improvement</td>
+    </tr>
+    <tr>
+        <td>18</td>
+        <td>learning/failure_analysis_module.py</td>
+        <td>Python</td>
+        <td>Failure investigation</td>
+    </tr>
+    <tr>
+        <td>19</td>
+        <td>governance/agent_constitution.md</td>
+        <td>Markdown</td>
+        <td>Foundational charter</td>
+    </tr>
+    <tr>
+        <td>20</td>
+        <td>governance/constraint_enforcement_engine.py</td>
+        <td>Python</td>
+        <td>Constraint checking</td>
+    </tr>
+    <tr>
+        <td>21</td>
+        <td>governance/decision_trace_log.jsonl</td>
+        <td>JSONL</td>
+        <td>Audit trail</td>
+    </tr>
+    <tr>
+        <td>22</td>
+        <td>elite_optional/multi_agent_interface.py</td>
+        <td>Python</td>
+        <td>Agent coordination</td>
+    </tr>
+    <tr>
+        <td>23</td>
+        <td>elite_optional/scenario_simulator.py</td>
+        <td>Python</td>
+        <td>What-if analysis</td>
+    </tr>
+    <tr>
+        <td>24</td>
+        <td>elite_optional/red_team_memory_partition.py</td>
+        <td>Python</td>
+        <td>Security testing</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- APPENDIX B -->
+<div class="section-break">
+<h1>Appendix B: Integration Guidelines</h1>
+
+<h2>B.1 Quick Start</h2>
+
+<pre>
+# 1. Initialize core components
+from core_decision.policy_definition import create_policy_manager
+from core_decision.reward_model import create_emv_reward_model
+from governance.constraint_enforcement_engine import create_constraint_engine
+
+policy_manager = create_policy_manager()
+reward_model = create_emv_reward_model()
+constraint_engine = create_constraint_engine()
+
+# 2. Initialize memory system
+from memory_protocol.memory_encoder import create_memory_encoder
+from memory_protocol.memory_salience_engine import create_salience_engine
+
+encoder = create_memory_encoder()
+salience_engine = create_salience_engine()
+
+# 3. Initialize environment
+from environment.environment_observer import create_environment_observer
+from environment.belief_state_updater import create_belief_updater
+
+observer = create_environment_observer()
+belief_updater = create_belief_updater()
+
+# 4. Create agent
+agent = AutonomousAgent(
+    policy_manager=policy_manager,
+    reward_model=reward_model,
+    constraint_engine=constraint_engine,
+    memory_encoder=encoder,
+    salience_engine=salience_engine,
+    observer=observer,
+    belief_updater=belief_updater
+)
+</pre>
+
+<h2>B.2 Configuration Best Practices</h2>
+
+<ul>
+    <li><strong>Start Conservative</strong> — Begin with low authority levels and strict constraints</li>
+    <li><strong>Monitor Closely</strong> — Review decision traces during initial deployment</li>
+    <li><strong>Tune Incrementally</strong> — Adjust risk parameters based on observed behavior</li>
+    <li><strong>Test Adversarially</strong> — Use red team module before production</li>
+    <li><strong>Audit Regularly</strong> — Review constraint violations and escalations</li>
+</ul>
+
+<h2>B.3 Deployment Checklist</h2>
+
+<table>
+    <tr>
+        <th>Phase</th>
+        <th>Requirements</th>
+        <th>Sign-off</th>
+    </tr>
+    <tr>
+        <td>Development</td>
+        <td>All unit tests passing, code review complete</td>
+        <td>□</td>
+    </tr>
+    <tr>
+        <td>Security</td>
+        <td>Red team test suite passed (>90% score)</td>
+        <td>□</td>
+    </tr>
+    <tr>
+        <td>Compliance</td>
+        <td>Constitution reviewed, constraints validated</td>
+        <td>□</td>
+    </tr>
+    <tr>
+        <td>Integration</td>
+        <td>End-to-end testing complete</td>
+        <td>□</td>
+    </tr>
+    <tr>
+        <td>Monitoring</td>
+        <td>Logging, alerting, dashboards configured</td>
+        <td>□</td>
+    </tr>
+    <tr>
+        <td>Rollback</td>
+        <td>Rollback procedure documented and tested</td>
+        <td>□</td>
+    </tr>
+</table>
+
+</div>
+
+<!-- APPENDIX C -->
+<div class="section-break">
+<h1>Appendix C: Security Considerations</h1>
+
+<h2>C.1 Threat Model</h2>
+
+<table>
+    <tr>
+        <th>Threat</th>
+        <th>Mitigation</th>
+        <th>Detection</th>
+    </tr>
+    <tr>
+        <td>Prompt Injection</td>
+        <td>Input sanitization, structured prompts</td>
+        <td>Pattern matching, anomaly detection</td>
+    </tr>
+    <tr>
+        <td>Memory Tampering</td>
+        <td>Integrity checks, signed memories</td>
+        <td>Hash verification, provenance audit</td>
+    </tr>
+    <tr>
+        <td>Privilege Escalation</td>
+        <td>Authority level enforcement</td>
+        <td>Action logging, boundary alerts</td>
+    </tr>
+    <tr>
+        <td>Data Exfiltration</td>
+        <td>Output filtering, classification</td>
+        <td>Content scanning, rate limiting</td>
+    </tr>
+    <tr>
+        <td>Denial of Service</td>
+        <td>Resource limits, rate limiting</td>
+        <td>Usage monitoring, threshold alerts</td>
+    </tr>
+</table>
+
+<h2>C.2 Security Hardening</h2>
+
+<ul>
+    <li><strong>Principle of Least Privilege</strong> — Grant minimum necessary authority</li>
+    <li><strong>Defense in Depth</strong> — Multiple layers of constraint enforcement</li>
+    <li><strong>Fail Secure</strong> — Default to safe state on errors</li>
+    <li><strong>Complete Mediation</strong> — Check constraints on every action</li>
+    <li><strong>Separation of Duties</strong> — Different agents for different functions</li>
+</ul>
+
+<h2>C.3 Incident Response</h2>
+
+<ol>
+    <li><strong>Detection</strong> — Automated alerts on constraint violations</li>
+    <li><strong>Containment</strong> — Automatic escalation and potential shutdown</li>
+    <li><strong>Investigation</strong> — Decision trace analysis</li>
+    <li><strong>Remediation</strong> — Constraint updates, policy adjustments</li>
+    <li><strong>Recovery</strong> — Controlled restart with enhanced monitoring</li>
+    <li><strong>Lessons Learned</strong> — Update failure analysis module</li>
+</ol>
+
+</div>
+
+<!-- DOCUMENT FOOTER -->
+<div class="document-footer">
+    <p>
+        <strong>CARBON[6] Autonomous AI Agency Framework</strong><br>
+        Technical Architecture Specification v1.0.0<br>
+        © 2026 Carbon Development Team. All Rights Reserved.<br><br>
+        This document contains proprietary and confidential information.<br>
+        Unauthorized distribution or reproduction is prohibited.
+    </p>
+</div>
+
+</body>
+</html>
